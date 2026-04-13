@@ -70,8 +70,8 @@ params.prevRoundCoverage           = 0.5
 //Parameter for HMMER Results (in case of available)
 params.hmmResults                  = ""
 
-//Parameter for OldExtension
-params.oldExtend                   = ""
+//Parameter for AncientMode
+params.AncientMode                   = ""
 
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3
@@ -188,7 +188,7 @@ include {FAIndex        } from './modules/01_Preprocessing/06_FAIndex'
 
 //RRE
 ////Extension Central
-if ( params.oldExtend ){
+if ( params.AncientMode ){
     include { RRE_CentralExtension } from './modules/04_OldExt/01_CentralExtension/main.nf'
 } else {
     include { RRE_CentralExtension } from './modules/02_RRE/01_CentralExtension/main.nf'
@@ -281,8 +281,8 @@ workflow RRE{
     //////////////////////////////////////////////
     //Recursive Extension
     //////////////////////////////////////////////
-    //In case of oldExt script
-    if ( params.oldExtend ){
+    //In case of AncientMode script
+    if ( params.AncientMode ){
         RREScript = RREOLDScript
     }
 

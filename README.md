@@ -16,7 +16,7 @@ Required flags:
 Optional/advanced:
 - `--outDir` — output folder (default `./Results`)
 - `--hmmResults` — precomputed HMMER tblout to skip running nhmmer
-- `--oldExtend` — use extension strategies for older repeats
+- `--AncientMode` — use extension strategies for older repeats
 - `--hyperT` — enable hyperthreading flag passed to some tools
 
 Key parameters (current defaults from `RRE.nf`):
@@ -70,3 +70,6 @@ Note: To run the HEEA workflow, set `--workflow HEEA` (same required inputs).
 - We like to use [AliView](https://ormbunkar.se/aliview/) to visualize our MSAs.
   
 ## Citation
+Recursive Repeat Extender (RRE): A recursive approach to automatically extend repeat element models
+Francisco Falcon, Elly M. Tanaka, Diego Rodriguez-Terrones
+bioRxiv 2026.04.14.718546; doi: https://doi.org/10.64898/2026.04.14.718546

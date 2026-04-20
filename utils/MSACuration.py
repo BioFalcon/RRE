@@ -169,27 +169,27 @@ def main():
         plt.hist(Bits_Sliding[1:], bins=50)
         plt.xlabel("Bits")
         plt.ylabel("Frequency")
-        plt.title("Plot 1 - Bits distribution raw alignment (Sliging Window "+str(MainWindow)+")" )
+        plt.title("Plot 1 - Bits distribution raw alignment (Sliding Window "+str(MainWindow)+")" )
 
         Plot2 = plt.figure()
         plt.hist(Gaps_Sliding[1:], bins=50)
         plt.xlabel("Gaps")
         plt.ylabel("Frequency")
-        plt.title("Plot 2 - Gaps distribution raw alignment (Sliging Window "+str(MainWindow)+")" )
+        plt.title("Plot 2 - Gaps distribution raw alignment (Sliding Window "+str(MainWindow)+")" )
 
         Plot3 = plt.figure(figsize=(10, 3))
         plt.subplots_adjust(bottom=0.20)
         plt.plot(range(0,len(Bits_Sliding)), Bits_Sliding, color="#4287f5", lw=0.1)
         plt.xlabel("Position", fontsize=15)
         plt.ylabel("Bits", fontsize=15)
-        plt.title("Plot 3 - Bits across raw alignment (Sliging Window "+str(MainWindow)+")", fontsize=18)
+        plt.title("Plot 3 - Bits across raw alignment (Sliding Window "+str(MainWindow)+")", fontsize=18)
 
         Plot4 = plt.figure(figsize=(10, 3))
         plt.subplots_adjust(bottom=0.20)
         plt.plot(range(0,len(Gaps_Sliding)), Gaps_Sliding, color="#f53b3b", lw=0.1)
         plt.xlabel("Position", fontsize=15)
         plt.ylabel("Gaps", fontsize=15)
-        plt.title("Plot 3 - Gaps across raw alignment (Sliging Window "+str(MainWindow)+")", fontsize=18)
+        plt.title("Plot 3 - Gaps across raw alignment (Sliding Window "+str(MainWindow)+")", fontsize=18)
 
     ##########Calculate the threshold
     ##Check if there is at least two different values
@@ -211,7 +211,7 @@ def main():
             plt.axvline(x=NoiseThresh, color="#32a852", linestyle="--", label="Threshold")
             plt.xlabel("Bits")
             plt.ylabel("Density")
-            plt.title("Plot 9 - Bits density distribution of Bits (Sliging Window "+str(MainWindow)+")")
+            plt.title("Plot 9 - Bits density distribution of Bits (Sliding Window "+str(MainWindow)+")")
     
         ##Kill if short#
         if Short:

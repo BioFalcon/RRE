@@ -43,9 +43,9 @@ Key parameters (current defaults from `RRE.nf`):
 git clone https://github.com/BioFalcon/RRE
 ```
 
-After building the container, it needs to be added to the `nextflow.config` file.
+After cloning the repository, the `netflow.config` file need to be adjusted to run in the available compute environment.
 
-2) Run the pipeline (RRE workflow example):
+1) Run the pipeline (RRE workflow example):
 
 ```bash
 nextflow run RRE.nf \

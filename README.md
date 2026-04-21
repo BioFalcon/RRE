@@ -77,6 +77,7 @@ nextflow run RRE.nf \
 	--consensusAln ./examples/AncientExtension/MamCR1.Truncated.stk \
 	--workflow RRE \
 	--AncientMode \
+	--extension 90 \
 	--outDir ./Results \
 ```
 

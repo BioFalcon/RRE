@@ -4,8 +4,9 @@ Recursive Repeat Extension (RRE) is a Nextflow DSL2 pipeline for extending and p
 
 ## Requirements
 - Nextflow ≥ 22.03.0-edge (DSL2 enabled)
-- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent)
+- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent, we provide a Docker repository contained in dockerhub under `biofalcon/rre`, and is already included in the nextflow config file)
 - Repeat libraries produced by RepeatModeler2 (`.stk` **and** `.fa` )
+  
 ## Inputs
 Required flags:
 - `--Genome` — genome FASTA
@@ -36,10 +37,10 @@ Key parameters (current defaults from `RRE.nf`):
 - `--polishCoverage` 50
 
 ## Quickstart
-1) Build or pull a container (example with Apptainer):
+1) Clone the pipeline using Git:
 
 ```bash
-apptainer build rre.sif Dockerfile
+git clone https://github.com/BioFalcon/RRE
 ```
 
 After building the container, it needs to be added to the `nextflow.config` file.
@@ -57,14 +58,37 @@ nextflow run RRE.nf \
 
 Note: To run the HEEA workflow, set `--workflow HEEA` (same required inputs).
 
+## Examples
+1) Using the human genome (`HumanGenome.fa`; not included in this repository) to extend a repeat library:
+```bash
+nextflow run RRE.nf \
+	--Genome ./HumanGenome.fa \
+	--consensus ./examples/NormalRun/Consensi.fa \
+	--consensusAln ./examples/NormalRun/Consensi.stk \
+	--workflow RRE \
+	--outDir ./Results \
+```
+
+2) Using the human genome (`HumanGenome.fa`; not included in this repository) to extend an ancient repeat (CR1_Mam):
+```bash
+nextflow run RRE.nf \
+	--Genome ./HumanGenome.fa \
+	--consensus ./examples/AncientExtension/MamCR1.Truncated.fa \
+	--consensusAln ./examples/AncientExtension/MamCR1.Truncated.stk \
+	--workflow RRE \
+	--AncientMode \
+	--outDir ./Results \
+```
+
 ## Outputs
 - `Results/WorkDir/` — per-repeat working directories containing intermediate HMMER hits, alignments, curated consensi, and logs.
 - `Results/MergingLibrary` — final polished consensus sequences and checks from the Polishing and CD-HIT steps. Results are provided in `.stk` and `.fa` formats
 
 ## Notes & tips
 - If you already have HMMER search results, provide `--hmmResults` to skip `HMMER_Run`.
+- If extending a custom repeat library, make sure the names in the `.fasta` and `.stk` files match. The ID in the `.stk` file is contained in the `#=GF ID` field. In the fasta file, make sure the ID is followed by a `#` character, otherwise the pipeline won't work (**IMPORTANT**)
 - Modify the provided nextflow.config file to take advantage of your HPC environment. We provide some values for memory, CPUs, and walltime, but this can be modified according to the available resources. While we use `slurm` as template, other workflow managers such as `pbs` and `sge` are compatible with Nextflow.
-- Adjust to a higher `--extension` value to do less rounds, but increasing it might lead to chimeric families (e.g. inclussion of Alu families in other repeat families)
+- Adjust to a higher `--extension` value to do less rounds, but increasing it#=GF ID might lead to chimeric families (e.g. inclussion of Alu families in other repeat families)
 - RRE was built with "resumability" in mind. In case Nextflow is unable to resume a run through the `-resume` flag, as longs as the `--outDir` remains the same RRE will not overwrite any of the already generated results and will resume at the latest checkpoint.
 - RRE is agnostic to the input genome. We observed long runtimes when segmental duplications are present. Usage of tools like [BISER](https://github.com/0xTCG/biser) can help detect this duplications to hard-mask them before starting a run.
 - We like to use [AliView](https://ormbunkar.se/aliview/) to visualize our MSAs.

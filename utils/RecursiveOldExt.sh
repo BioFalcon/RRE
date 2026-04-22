@@ -536,6 +536,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     fi
                     BreakNow=True
                     break
+                fi
             else
                 SecondGo=False
             fi

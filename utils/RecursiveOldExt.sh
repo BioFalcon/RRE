@@ -39,6 +39,7 @@ ExtensionSize=${Extension}
 AnchorSize=$(  echo ${ExtensionSize} | awk '{print int($1*1.5)}' )
 Increase=$(  echo ${ExtensionSize} | awk '{$0=$0*0.125;printf("%d\n",$0+=$0<0?0:0.9)}' )
 LongConsensus=False
+SecondGo=False
 
 ######################
 #####  Function  #####
@@ -520,11 +521,23 @@ while [ ${Family} -lt ${NumFamilies} ];do
                             awk '{print $2-$1}' )
 
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
-                if [ ${ExtendedSize} -ne 0 ];then
-                    > ./Round_${CurrRound}/GoodCHECK
-                fi
-                BreakNow=True
-                break
+                if [ ${SecondGo} == "False"];then
+                    #Remake Coord file to git a second go
+                    if [[ $1 == "Left" ]];then
+                        echo -e "0\t${ExtensionSize}" > ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
+                    else
+                        LengthConsensus=$(seqkit fx2tab --length --name ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus.fa | cut -f2)
+                        echo | awk -v LenCons=${LengthConsensus} -v Ext=${ExtensionSize} '{print LenCons-Ext"\t"LenCons}' > ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
+                    fi
+                    SecondGo=True
+                else 
+                    if [ ${ExtendedSize} -ne 0 ];then
+                        > ./Round_${CurrRound}/GoodCHECK
+                    fi
+                    BreakNow=True
+                    break
+            else
+                SecondGo=False
             fi
 
             #Check if it has reached max rounds

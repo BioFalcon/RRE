@@ -175,7 +175,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #Cutoff for symfrac based on number of sequences
             #Symfrac_Thresh=$(grep -c ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa | awk '{print 50/$1}')
             Symfrac_Thresh=0.3 
-            
+
             ##Make HMM model 
             hmmbuild \
             --symfrac ${Symfrac_Thresh} \
@@ -512,7 +512,8 @@ while [ ${Family} -lt ${NumFamilies} ];do
             ../Staging/${CoordExtractScript} \
                 --input ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln \
                 --output ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord \
-                --Side ${LowerCase}
+                --Side ${LowerCase} \
+                --BasesOverl 20
 
             #Get extended size
             ExtendedSize=$( cat ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord | \

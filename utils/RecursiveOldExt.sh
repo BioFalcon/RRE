@@ -675,6 +675,7 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
                 --input ./Right/TEMP_Round${RoundNum}.aln.fa \
                 --output ./Right/Round_${CurrRound} \
                 --perc 0.3
+        done
     fi
 
     #Make check

@@ -300,6 +300,7 @@ workflow RRE{
     //////////////////////////////////////////////
     //Polishing
     //////////////////////////////////////////////
+    if ( !params.AncientMode ){
     Polishing( RRE_RecursiveExtension.out ,
                 outDir,
                 CoverageScript,
@@ -314,7 +315,7 @@ workflow RRE{
            outDir,
            ConsensusFasta,
            consensusAln )
-    
+    }
 }
 
 //Main workflow

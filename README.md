@@ -81,6 +81,30 @@ nextflow run RRE.nf \
 	--extension 90 \
 	--outDir ./Results \
 ```
+We recommend monitoring the results of each round of extension carefully, as alignments might not reflect the reality of the extension (e.g. inclusion of other families, truncated extension). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
+
+Sometimes the alignments are not correct fue to internal duplications , leading to incorrect merged alignments. To correct this, we recommend making a new alignment of the incorrect aligned parts using a script as follows:
+```bash
+mkdir MergeConsensus
+
+cp ./Results/WorkDir/${RepeatID}/Left/Round_14/05_CurrentConsensi.Left.Round14.Extended.aln.fa ./MergeConsensus/MergedAln_Round14.aln.fa
+
+for i in $(seq 15 1 20); do 
+	RoundNum=$(echo $i | awk '{ printf("%02d\n", $1) }')
+	PrevAln=$(echo $i  | awk '{ printf("%02d\n", $1 - 1) }')
+
+	mafft --thread 32 \
+		  --seed ./Results/WorkDir/${RepeatID}/Left/Round_${RoundNum}/06_CurrentConsensi.Left.Round${RoundNum}.Extended.tmp2.aln.fa \
+		  --seed ./MergeConsensus/MergedAln_Round${PrevAln}.aln.fa \
+		  /dev/null | \
+	seqkit grep -v -r -p "DUP" > ./MergeConsensus/TEMP_Round${RoundNum}.aln.fa
+
+	python ../../Staging/VerticalCleaning.py \
+		-i ./MergeConsensus/TEMP_Round${RoundNum}.aln.fa \
+		-o ./MergeConsensus/MergedAln_Round${RoundNum} \
+		--perc 0.3
+done
+```
 
 ## Outputs
 - `Results/WorkDir/` — per-repeat working directories containing intermediate HMMER hits, alignments, curated consensi, and logs.

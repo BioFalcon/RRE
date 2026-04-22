@@ -547,6 +547,9 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 break
             fi
 
+            #Make check for this round
+            > ./Round_${CurrRound}/GoodCHECK
+
             #Increase round number
             CurrRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1+1}')
 
@@ -616,59 +619,66 @@ mkdir -p ./Merge
 cd ./Merge
 
 if [ ! -f ./MERGE.GOOD.CHECK ];then
-    #Determine the number of families on each side
-    NumFamiliesLeft=$(ls -d ../Left/Family_* | wc -l)
-    NumFamiliesRight=$(ls -d ../Right/Family_* | wc -l)
-    
-    if [ ${NumFamiliesLeft} -gt ${NumFamiliesRight} ];then
-        NumFamilies=${NumFamiliesLeft}
-    elif [ ${NumFamiliesRight} -gt 0 ];then
-        NumFamilies=${NumFamiliesRight}
-    else
-        NumFamilies=1
+    if [ -f ../Left/Family_00/GOOD.FAM.CHECK ];then
+        mkdir -p Left
+        cp ../Left/Family_00/Round_00/05_CurrentConsensi.Left.Round00.Extended.aln.fa \
+            ./Left/Round_00.aln.fa
+        for CurrRound in $(ls -d ../Left/Family_00/Round_*| sed 1d| sed 's/.*_//');do
+            PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
+            mafft \
+                --seed ../Left/Family_00/Round_${CurrRound}/06_CurrentConsensi.Left.Round${CurrRound}.Extended.tmp2.aln.fa \
+                --seed ./Round_${PrevRound}.aln.fa \
+                /dev/null | \
+            seqkit grep -v -r -p "DUP" > ./Left/TEMP_Round${RoundNum}.aln.fa
+
+            python ../Left/Staging/${VerticalScript} \
+                --input ./Left/TEMP_Round${RoundNum}.aln.fa \
+                --output ./Left/Round_${CurrRound} \
+                --perc 0.3
+        done
+
+        if [ -f ../Right/Family_00/GOOD.FAM.CHECK ];then
+            mkdir -p Right
+
+            cp ./Left/MergedAln_Round${CurrRound}.aln.fa \
+                ./Right/Round00.aln.fa
+
+            for CurrRound in $(ls -d ../Right/Family_00/Round_*| sed 1d| sed 's/.*_//');do
+                PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
+                mafft \
+                    --seed ../Right/Family_00/Round_${CurrRound}/06_CurrentConsensi.Right.Round${CurrRound}.Extended.tmp2.aln.fa \
+                    --seed ./Right/Round_${PrevRound}.aln.fa \
+                    /dev/null | \
+                seqkit grep -v -r -p "DUP" > ./Right/TEMP_Round${RoundNum}.aln.fa
+
+                python ../Right/Staging/${VerticalScript} \
+                    --input ./Right/TEMP_Round${RoundNum}.aln.fa \
+                    --output Round_${CurrRound} \
+                    --perc 0.3
+            done
+        fi
+    elif [ ../Right/Family_00/GOOD.FAM.CHECK ];then
+        mkdir -p Right
+
+        cp ../Right/Family_00/Round_00/05_CurrentConsensi.Right.Round00.Extended.aln.fa \
+            ./Right/Round_00.aln.fa
+
+        for CurrRound in $(ls -d ../Right/Family_00/Round_*| sed 1d| sed 's/.*_//');do
+            PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
+            mafft \
+                --seed ../Right/Family_00/Round_${CurrRound}/06_CurrentConsensi.Right.Round${CurrRound}.Extended.tmp2.aln.fa \
+                --seed ./Right/Round_${PrevRound}.aln.fa \
+                /dev/null | \
+            seqkit grep -v -r -p "DUP" > ./Right/TEMP_Round${RoundNum}.aln.fa
+
+            python ../Right/Staging/${VerticalScript} \
+                --input ./Right/TEMP_Round${RoundNum}.aln.fa \
+                --output ./Right/Round_${CurrRound} \
+                --perc 0.3
     fi
 
-    for CurrFam in $( seq -w 00 1 $(( ${NumFamilies} - 1 )) );do
-        #Make Family directory
-        mkdir -p ./Family_${CurrFam}
-
-        ExtendSucc=True
-        #Check which side to use for final output
-        #Bothsides or RIGHT OK
-        if [ -f ../Right/Family_${CurrFam}/GOOD.FAM.CHECK ];then
-            SideMerge=Right
-        elif [ -f ../Left/Family_${CurrFam}/GOOD.FAM.CHECK ];then
-            SideMerge=Left
-        elif [ -f ../Right/Family_${CurrFam}/BAD.FAM.CHECK ] && [ -f ../Left/Family_${CurrFam}/BAD.FAM.CHECK ] && [ -f ../Central/Family_${CurrFam}/Central.GOOD.CHECK ];then
-            SideMerge=Central
-        elif ( [ -f ../Right/Family_${CurrFam}/BAD.SIDE.CHECK ] || [ -f ../Right/Family_${CurrFam}/BAD.FAM.CHECK ] ) && ( [ -f ../Left/Family_${CurrFam}/BAD.SIDE.CHECK ] || [ -f ../Left/Family_${CurrFam}/BAD.FAM.CHECK ] ) && [ -f ../Central/Family_${CurrFam}/Central.GOOD.CHECK ];then
-            SideMerge=Central
-        else
-            ExtendSucc=False
-        fi
-
-        if [ ${ExtendSucc} == "True" ] && [ ${SideMerge} != "Central" ] ;then
-            HighestRound=$( ls ../${SideMerge}/Family_${CurrFam}/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/${SideMerge}\///;s/.*\///"| tail -1 )
-            cp ../${SideMerge}/Family_${CurrFam}/${HighestRound}/07_CurrentConsensi*Extended.Curated.aln.fa ./Family_${CurrFam}/FinalConsensi.aln.fa
-            cp ../${SideMerge}/Family_${CurrFam}/${HighestRound}/07_CurrentConsensi*Extended.Curated.Consensus.fa ./Family_${CurrFam}/FinalConsensi.consensus.fa
-            esl-reformat stockholm ./Family_${CurrFam}/FinalConsensi.aln.fa  >  ./Family_${CurrFam}/FinalConsensi.aln.stk
-        elif [ ${ExtendSucc} == "True" ] && [ ${SideMerge} == "Central" ];then
-            HighestRound=$( ls ../${SideMerge}/Family_${CurrFam}/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/${SideMerge}\///;s/.*\///"| tail -1 )
-            cp ../${SideMerge}/Family_${CurrFam}/${HighestRound}/07_CurrentConsensi*Extended.Curated.aln.fa \
-                ./Family_${CurrFam}/FinalConsensi.aln.fa
-            cp ../${SideMerge}/Family_${CurrFam}/${HighestRound}/07_CurrentConsensi*Extended.Curated.Consensus.fa \
-                ./Family_${CurrFam}/FinalConsensi.consensus.fa
-            esl-reformat stockholm ./Family_${CurrFam}/FinalConsensi.aln.fa  >  ./Family_${CurrFam}/FinalConsensi.aln.stk
-        else
-            echo ">${RepeatID}#BAD" > ./Family_${CurrFam}/FinalConsensi.aln.fa
-            echo "A" >> ./Family_${CurrFam}/FinalConsensi.aln.fa
-            cp ./Family_${CurrFam}/FinalConsensi.aln.fa ./Family_${CurrFam}/FinalConsensi.consensus.fa
-            > ./Family_${CurrFam}/FinalConsensi.aln.stk
-        fi
-
-        #Make Final Check
-        > ./Family_${CurrFam}/GoodCHECK
-    done
+    #Make check
+    > ./MERGE.GOOD.CHECK
 fi
 
 #Make check

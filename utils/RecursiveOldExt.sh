@@ -627,7 +627,7 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
             PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
             mafft \
                 --seed ../Left/Family_00/Round_${CurrRound}/06_CurrentConsensi.Left.Round${CurrRound}.Extended.tmp2.aln.fa \
-                --seed ./Round_${PrevRound}.aln.fa \
+                --seed ./Left/Round_${PrevRound}.aln.fa \
                 /dev/null | \
             seqkit grep -v -r -p "DUP" > ./Left/TEMP_Round${RoundNum}.aln.fa
 

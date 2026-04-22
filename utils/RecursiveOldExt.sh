@@ -629,10 +629,10 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
                 --seed ../Left/Family_00/Round_${CurrRound}/06_CurrentConsensi.Left.Round${CurrRound}.Extended.tmp2.aln.fa \
                 --seed ./Left/Round_${PrevRound}.aln.fa \
                 /dev/null | \
-            seqkit grep -v -r -p "DUP" > ./Left/TEMP_Round${RoundNum}.aln.fa
+            seqkit grep -v -r -p "DUP" > ./Left/TEMP_Round${CurrRound}.aln.fa
 
             python ../Left/Staging/${VerticalScript} \
-                --input ./Left/TEMP_Round${RoundNum}.aln.fa \
+                --input ./Left/TEMP_Round${CurrRound}.aln.fa \
                 --output ./Left/Round_${CurrRound} \
                 --perc 0.3
         done
@@ -669,10 +669,10 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
                 --seed ../Right/Family_00/Round_${CurrRound}/06_CurrentConsensi.Right.Round${CurrRound}.Extended.tmp2.aln.fa \
                 --seed ./Right/Round_${PrevRound}.aln.fa \
                 /dev/null | \
-            seqkit grep -v -r -p "DUP" > ./Right/TEMP_Round${RoundNum}.aln.fa
+            seqkit grep -v -r -p "DUP" > ./Right/TEMP_Round${CurrRound}.aln.fa
 
             python ../Right/Staging/${VerticalScript} \
-                --input ./Right/TEMP_Round${RoundNum}.aln.fa \
+                --input ./Right/TEMP_Round${CurrRound}.aln.fa \
                 --output ./Right/Round_${CurrRound} \
                 --perc 0.3
         done

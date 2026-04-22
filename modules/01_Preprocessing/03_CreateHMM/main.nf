@@ -14,7 +14,7 @@ process CreateNSplitHMM {
     hmmbuild \\
         --dna \\
         --cpu ${task.cpus} \\
-        --symfrac 0 \\
+        --symfrac 0.3 \\
         --seed 1992 \\
         --fragthresh 1.0 \\
         --wnone \\

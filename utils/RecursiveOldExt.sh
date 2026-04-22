@@ -173,8 +173,9 @@ while [ ${Family} -lt ${NumFamilies} ];do
             fi
         
             #Cutoff for symfrac based on number of sequences
-            Symfrac_Thresh=$(grep -c ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa | awk '{print 50/$1}')
-
+            #Symfrac_Thresh=$(grep -c ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa | awk '{print 50/$1}')
+            Symfrac_Thresh=0.3 
+            
             ##Make HMM model 
             hmmbuild \
             --symfrac ${Symfrac_Thresh} \

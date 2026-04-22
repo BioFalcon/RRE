@@ -77,6 +77,7 @@ nextflow run RRE.nf \
 	--consensusAln ./examples/AncientExtension/MamCR1.Truncated.stk \
 	--workflow RRE \
 	--AncientMode \
+	--SampleSeqs 150 \
 	--extension 90 \
 	--outDir ./Results \
 ```
@@ -86,10 +87,11 @@ nextflow run RRE.nf \
 - `Results/MergingLibrary` — final polished consensus sequences and checks from the Polishing and CD-HIT steps. Results are provided in `.stk` and `.fa` formats
 
 ## Notes & tips
-- If you already have HMMER search results, provide `--hmmResults` to skip `HMMER_Run`.
+- If you already have HMMER search results, provide `--hmmResults` to skip `HMMER_Run`. This saves time in case you have already ran RRE before.
 - If extending a custom repeat library, make sure the names in the `.fasta` and `.stk` files match. The ID in the `.stk` file is contained in the `#=GF ID` field. In the fasta file, make sure the ID is followed by a `#` character, otherwise the pipeline won't work (**IMPORTANT**)
+- If extending a model from DFAM (or other libraries that may contain very gappy alignments), we recommend running nhmmer using the HMM model provided by DFAM separately, and providing the results to RRE using the `--hmmResults` flag.
 - Modify the provided nextflow.config file to take advantage of your HPC environment. We provide some values for memory, CPUs, and walltime, but this can be modified according to the available resources. While we use `slurm` as template, other workflow managers such as `pbs` and `sge` are compatible with Nextflow.
-- Adjust to a higher `--extension` value to do less rounds, but increasing it#=GF ID might lead to chimeric families (e.g. inclussion of Alu families in other repeat families)
+- Adjust to a higher `--extension` value to do less rounds, but increasing it might lead to chimeric families (e.g. inclussion of Alu families in other repeat families)
 - RRE was built with "resumability" in mind. In case Nextflow is unable to resume a run through the `-resume` flag, as longs as the `--outDir` remains the same RRE will not overwrite any of the already generated results and will resume at the latest checkpoint.
 - RRE is agnostic to the input genome. We observed long runtimes when segmental duplications are present. Usage of tools like [BISER](https://github.com/0xTCG/biser) can help detect this duplications to hard-mask them before starting a run.
 - We like to use [AliView](https://ormbunkar.se/aliview/) to visualize our MSAs.

@@ -521,7 +521,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                             awk '{print $2-$1}' )
 
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
-                if [ ${SecondGo} == "False"];then
+                if [[ ${SecondGo} == "False" ]];then
                     #Remake Coord file to git a second go
                     if [[ $1 == "Left" ]];then
                         echo -e "0\t${ExtensionSize}" > ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord

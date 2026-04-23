@@ -4,20 +4,20 @@ Recursive Repeat Extension (RRE) is a Nextflow DSL2 pipeline for extending and p
 
 ## Requirements
 - Nextflow ≥ 22.03.0-edge (DSL2 enabled)
-- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent, we provide a Docker repository contained in dockerhub under `biofalcon/rre`, and is already included in the nextflow config file)
+- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent, we provide a Docker repository contained in dockerhub under `biofalcon/rre` which is already included in the nextflow config file and should be pulled automatically)
 - Repeat libraries produced by RepeatModeler2 (`.stk` **and** `.fa` )
   
 ## Inputs
 Required flags:
 - `--Genome` — genome FASTA
-- `--consensus` — consensus sequences FASTA (e.g., RepeatModeler2 output)
-- `--alnFile` — consensus alignment in Stockholm (`.stk`) alignment format
+- `--consensus` — consensus sequences FASTA (e.g. RepeatModeler2 output). Note that RRE expects sequence names to list the family classification after a `#` character (e.g. `>rnd-1_family-101#LTR`).
+- `--alnFile` — consensus alignments in Stockholm (`.stk`) alignment format. Note that sequence names must match the entries in the `--consensus` file.
 - `--workflow` — either `RRE` or `HEEA`
 
 Optional/advanced:
 - `--outDir` — output folder (default `./Results`)
 - `--hmmResults` — precomputed HMMER tblout to skip running nhmmer
-- `--AncientMode` — use extension strategies for older repeats
+- `--AncientMode` — use extension strategy for older repeats
 - `--hyperT` — enable hyperthreading flag passed to some tools
 
 Key parameters (current defaults from `RRE.nf`):
@@ -81,9 +81,9 @@ nextflow run RRE.nf \
 	--extension 90 \
 	--outDir ./Results \
 ```
-We recommend monitoring the results of each round of extension carefully, as alignments might not reflect the reality of the extension (e.g. inclusion of other families, truncated extension). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
+Extending ancient repeats is a challenging task and outputs should always be manually curated. We recommend monitoring the results of each round of extension carefully, as highly divergent families might produce incorrect outputs (e.g. inclusion of other families, truncated extension, etc.). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
 
-Sometimes the alignments are not correct fue to internal duplications , leading to incorrect merged alignments. To correct this, we recommend making a new alignment of the incorrect aligned parts using a script as follows:
+Sometimes the alignments are not correct due to internal misalignments, leading to incorrect merged alignments. To correct this, we recommend manually making a new merged alignment including only the correct partial alignments. For example, one could merge specifically rounds 15 through 20 as follows:
 ```bash
 mkdir MergeConsensus
 

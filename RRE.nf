@@ -22,7 +22,7 @@ def helpMessage() {
   --maxExtensionSize     Maximum size for the extension to be considered  (default:25000)
                          NOTE:In recursive extension, this limit only applies to each side separately
   --hyperT               Activate Hyperthreading (off by default)
-  --consensusAln         Alignment file of the consensus sequences in stockholm format.
+  --alnFile         Alignment file of the consensus sequences in stockholm format.
   --maxRounds           Maximum number of rounds for the recursive extension (default:30)
   
 
@@ -50,7 +50,7 @@ params.help                        = ""
 params.h                           = ""
 params.maxExtensionSize            = 25000
 params.hyperT                      = ""
-params.consensusAln                = ""
+params.alnFile                     = ""
 params.maxRounds                   = 30  
 params.maxFamilies                 = 10
 params.SampleSeqs                  = 25
@@ -98,8 +98,8 @@ if ( !params.Genome){
     exit 1, helpMessage() + "--Genome not specified !!!"
 } else if (!params.consensus){
     exit 1, helpMessage() + "--consensus not specified !!!"
-} else if (!params.consensusAln){
-    exit 1, helpMessage() + "--consensusAln not specified !!!"
+} else if (!params.alnFile){
+    exit 1, helpMessage() + "--alnFile not specified !!!"
 } else if ( !params.workflow ){
     exit 1, helpMessage() + "--workflow not specified !!!"
 } else if ( params.workflow != "RRE" && params.workflow != "HEEA" ){
@@ -128,7 +128,7 @@ if (params.hmmResults){
 outDir             = file(params.outDir)
 Genome             = file(params.Genome)
 consensus          = file(params.consensus)
-consensusAln       = file(params.consensusAln)
+consensusAln       = file(params.alnFile)
 
 CurateScript       = file("./utils/MSACuration.py")
 CoverageScript     = file("./utils/CoverageSelection.py")
@@ -158,7 +158,7 @@ log.info "Running the pipeline with the following parameters: "
 log.info "============================================================="
 log.info "Genome path                : ${params.Genome}"
 log.info "Consensus path             : ${params.consensus}"
-log.info "Consensus alignment file   : ${params.consensusAln}"
+log.info "Alignment file             : ${params.alnFile}"
 log.info "Output path                : ${params.outDir}"
 log.info "Extension size             : ${params.extension}"
 log.info "Output path                : ${params.outDir}"

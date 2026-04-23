@@ -11,7 +11,7 @@ Recursive Repeat Extension (RRE) is a Nextflow DSL2 pipeline for extending and p
 Required flags:
 - `--Genome` — genome FASTA
 - `--consensus` — consensus sequences FASTA (e.g., RepeatModeler2 output)
-- `--consensusAln` — consensus alignment in Stockholm (`.stk`) alignment format
+- `--alnFile` — consensus alignment in Stockholm (`.stk`) alignment format
 - `--workflow` — either `RRE` or `HEEA`
 
 Optional/advanced:
@@ -51,7 +51,7 @@ After cloning the repository, the `netflow.config` file need to be adjusted to r
 nextflow run RRE.nf \
 	--Genome path/to/genome.fa \
 	--consensus path/to/consensi.fa \
-	--consensusAln path/to/consensi.aln \
+	--alnFile path/to/consensi.aln \
 	--workflow RRE \
 	--outDir ./Results \
 ```
@@ -64,7 +64,7 @@ Note: To run the HEEA workflow, set `--workflow HEEA` (same required inputs).
 nextflow run RRE.nf \
 	--Genome ./HumanGenome.fa \
 	--consensus ./examples/NormalRun/Consensi.fa \
-	--consensusAln ./examples/NormalRun/Consensi.stk \
+	--alnFile ./examples/NormalRun/Consensi.stk \
 	--workflow RRE \
 	--outDir ./Results \
 ```
@@ -74,7 +74,7 @@ nextflow run RRE.nf \
 nextflow run RRE.nf \
 	--Genome ./HumanGenome.fa \
 	--consensus ./examples/AncientExtension/MamCR1.Truncated.fa \
-	--consensusAln ./examples/AncientExtension/MamCR1.Truncated.stk \
+	--alnFile ./examples/AncientExtension/MamCR1.Truncated.stk \
 	--workflow RRE \
 	--AncientMode \
 	--SampleSeqs 150 \

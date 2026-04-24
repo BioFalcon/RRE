@@ -11,7 +11,7 @@ Recursive Repeat Extension (RRE) is a Nextflow DSL2 pipeline for extending and p
 Required flags:
 - `--Genome` — genome FASTA
 - `--consensus` — consensus sequences FASTA (e.g. RepeatModeler2 output). Note that RRE expects sequence names to list the family classification after a `#` character (e.g. `>rnd-1_family-101#LTR`).
-- `--alnFile` — consensus alignments in Stockholm (`.stk`) alignment format. Note that sequence names must match the entries in the `--consensus` file.
+- `--alnFile` — seed alignments in Stockholm (`.stk`) alignment format. Note that sequence names must match the entries in the `--consensus` file.
 - `--workflow` — either `RRE` or `HEEA`
 
 Optional/advanced:

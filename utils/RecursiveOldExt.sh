@@ -502,6 +502,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --zeroOnly \
                 --Plots
 
+            #Remove peak suffix
+            mv ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus__Peak0.fa ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus.fa
+            mv ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated__Peak0.aln.fa ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.aln.fa                
+
             ##Make mafft alignment of the previous consensus
             mafft \
                 --localpair \

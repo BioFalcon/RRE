@@ -490,7 +490,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             mafft \
                 --seed ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2.aln.fa \
                 --seed ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa | \
-            seqkit grep -v -r -p "DUP$" \
+            seqkit grep -v -r -p "DUP" \
             > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
 
             #Remove gappy columns

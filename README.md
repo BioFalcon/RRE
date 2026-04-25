@@ -1,6 +1,6 @@
-# RRE – Recursive Repeat Extension
+# RRE – Recursive Repeat Extender
 
-Recursive Repeat Extension (RRE) is a Nextflow DSL2 pipeline for extending and polishing repeat consensus sequences produced by tools like RepeatModeler2. It also ships an alternative HEEA workflow for a different extension strategy.
+Recursive Repeat Extender (RRE) is a Nextflow DSL2 pipeline for extending and polishing repeat consensus sequences produced by tools like RepeatModeler2. It also ships an alternative HEEA workflow for a different extension strategy.
 
 ## Requirements
 - Nextflow ≥ 22.03.0-edge (DSL2 enabled)

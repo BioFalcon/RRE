@@ -494,7 +494,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
 
             #Remove gappy columns
-            python3 ../Staging/${CurateScript}
+            python3 ../Staging/${CurateScript} \
                 --input ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa \
                 --output ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
                 --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} \

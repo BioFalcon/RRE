@@ -626,62 +626,25 @@ cd ./Merge
 
 if [ ! -f ./MERGE.GOOD.CHECK ];then
     if [ -f ../Left/Family_00/GOOD.FAM.CHECK ];then
-        mkdir -p Left
-        cp ../Left/Family_00/Round_00/05_CurrentConsensi.Left.Round00.Extended.aln.fa \
-            ./Left/Round_00.aln.fa
-        for CurrRound in $(ls -d ../Left/Family_00/Round_*| sed 1d| sed 's/.*_//');do
-            PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
-            mafft \
-                --seed ../Left/Family_00/Round_${CurrRound}/06_CurrentConsensi.Left.Round${CurrRound}.Extended.tmp2.aln.fa \
-                --seed ./Left/Round_${PrevRound}.aln.fa \
-                /dev/null | \
-            seqkit grep -v -r -p "DUP" > ./Left/TEMP_Round${CurrRound}.aln.fa
-
-            python ../Left/Staging/${VerticalScript} \
-                --input ./Left/TEMP_Round${CurrRound}.aln.fa \
-                --output ./Left/Round_${CurrRound} \
-                --perc 0.3
-        done
-
         if [ -f ../Right/Family_00/GOOD.FAM.CHECK ];then
-            mkdir -p Right
-
-            cp ./Left/MergedAln_Round${CurrRound}.aln.fa \
-                ./Right/Round00.aln.fa
-
-            for CurrRound in $(ls -d ../Right/Family_00/Round_*| sed 1d| sed 's/.*_//');do
-                PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
-                mafft \
-                    --seed ../Right/Family_00/Round_${CurrRound}/06_CurrentConsensi.Right.Round${CurrRound}.Extended.tmp2.aln.fa \
-                    --seed ./Right/Round_${PrevRound}.aln.fa \
-                    /dev/null | \
-                seqkit grep -v -r -p "DUP" > ./Right/TEMP_Round${RoundNum}.aln.fa
-
-                python ../Right/Staging/${VerticalScript} \
-                    --input ./Right/TEMP_Round${RoundNum}.aln.fa \
-                    --output Round_${CurrRound} \
-                    --perc 0.3
-            done
+            HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
+            cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
+                ./Merge.aln.fa
+            cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
+                ./Merge.Consensus.fa
+        else
+            HighestRound=$( ls ../Left/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Left\///;s/.*\///"| tail -1 )
+            cp ../Left/Family_00/Round_${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.aln.fa \
+                ./Merge.aln.fa
+            cp ../Left/Family_00/Round_${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
+                ./Merge.Consensus.fa
         fi
     elif [ ../Right/Family_00/GOOD.FAM.CHECK ];then
-        mkdir -p Right
-
-        cp ../Right/Family_00/Round_00/05_CurrentConsensi.Right.Round00.Extended.aln.fa \
-            ./Right/Round_00.aln.fa
-
-        for CurrRound in $(ls -d ../Right/Family_00/Round_*| sed 1d| sed 's/.*_//');do
-            PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
-            mafft \
-                --seed ../Right/Family_00/Round_${CurrRound}/06_CurrentConsensi.Right.Round${CurrRound}.Extended.tmp2.aln.fa \
-                --seed ./Right/Round_${PrevRound}.aln.fa \
-                /dev/null | \
-            seqkit grep -v -r -p "DUP" > ./Right/TEMP_Round${CurrRound}.aln.fa
-
-            python ../Right/Staging/${VerticalScript} \
-                --input ./Right/TEMP_Round${CurrRound}.aln.fa \
-                --output ./Right/Round_${CurrRound} \
-                --perc 0.3
-        done
+        HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
+        cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
+            ./Merge.aln.fa
+        cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
+            ./Merge.Consensus.fa
     fi
 
     #Make check

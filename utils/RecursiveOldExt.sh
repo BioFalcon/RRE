@@ -495,8 +495,9 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #Merge alignment with previous rounds
             mafft \
                 --seed ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2.aln.fa \
-                --seed ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa | \
-            seqkit grep -v -r -p "DUP$" \
+                --seed ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa \
+				/dev/null | \
+            seqkit grep -v -r -p "DUP" \
             > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
 
             #Remove gappy columns
@@ -506,6 +507,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} \
                 --zeroOnly \
                 --Plots
+
+            #Remove peak suffix
+            mv ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus__Peak0.fa ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus.fa
+            mv ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated__Peak0.aln.fa ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.aln.fa                
 
             ##Make mafft alignment of the previous consensus
             mafft \

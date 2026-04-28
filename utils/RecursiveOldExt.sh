@@ -413,6 +413,12 @@ while [ ${Family} -lt ${NumFamilies} ];do
         
             cp ./Round_${CurrRound}/Temp.fa ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa
 
+            #Check if there is enough sequences to continue
+            if [ $( grep -c ">" ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa ) -lt 5 ];then
+                echo -e "\nNot enough sequences to continue"
+                break
+            fi
+
             #Make alignment of only selected sequences
             mafft \
                 --genafpair \

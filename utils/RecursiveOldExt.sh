@@ -124,6 +124,16 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
                 cp ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa \
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
+                #Add Round00 IDs
+                awk '{ 
+                    if($1 ~ "^>"){
+                        gsub("$","___Central",$1);
+                    };
+                    print
+                    }' ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa \
+                > ./Round_00/07_TEMP.aln.fa
+
+                mv ./Round_00/07_TEMP.aln.fa ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
 
                 cp ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa \
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
@@ -145,6 +155,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                         cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.aln.fa \
                             ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
 
+
                         #Generate Coord for Right
                         #echo -e "$(( ${ModelLen} - ${ExtSize} ))\t${ModelLen}" > ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
                 else
@@ -160,21 +171,20 @@ while [ ${Family} -lt ${NumFamilies} ];do
                         ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
                     cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.consensus.fa \
                         ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
-                        
                 fi
+                
+                #Add Round00 IDs
+                awk '{ 
+                    if($1 ~ "^>"){
+                        gsub("$","___Central",$1);
+                    };
+                    print
+                    }' ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa \
+                > ./Round_00/05_TEMP.aln.fa
+
+                mv ./Round_00/05_TEMP.aln.fa ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
             fi
         
-            #Add Round00 IDs
-            awk '{ 
-                if($1 ~ "^>"){
-                    gsub("$","___Central",$1);
-                };
-                print
-                }' ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa \
-            > ./Round_00/07_TEMP.aln.fa
-
-            mv ./Round_00/07_TEMP.aln.fa ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
-
             #Cutoff for symfrac based on number of sequences
             #Symfrac_Thresh=$(grep -c ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa | awk '{print 50/$1}')
             Symfrac_Thresh=0.3 

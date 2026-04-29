@@ -148,14 +148,14 @@ while [ ${Family} -lt ${NumFamilies} ];do
                             ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/02_CurrentConsensi.Left*Extended.bed \
                             ./Round_00/02_CurrentConsensi.${LowerCase}.Round00.Extended.bed                            
-                        cp ${CentralDir}/Family_${Family}/Final/Final/Final.Consensus.RightSide.Coord \
+                        cp ${CentralDir}/Family_${Family}/Final/Final.Consensus.RightSide.Coord \
                             ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
                         cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.consensus.fa \
                             ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
                         cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.aln.fa \
                             ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
                         #Generate Coord for Right
-                        echo -e "$(( ${ModelLen} - ${ExtSize} ))\t${ModelLen}" > ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
+                        #echo -e "$(( ${ModelLen} - ${ExtSize} ))\t${ModelLen}" > ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
                 else
                     cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.aln.fa \
                         ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
@@ -639,22 +639,22 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
     if [ -f ../Left/Family_00/GOOD.FAM.CHECK ];then
         if [ -f ../Right/Family_00/GOOD.FAM.CHECK ];then
             HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
-            cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
+            cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
                 ./Merge.aln.fa
-            cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
+            cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
                 ./Merge.Consensus.fa
         else
             HighestRound=$( ls ../Left/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Left\///;s/.*\///"| tail -1 )
-            cp ../Left/Family_00/Round_${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.aln.fa \
+            cp ../Left/Family_00/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.aln.fa \
                 ./Merge.aln.fa
-            cp ../Left/Family_00/Round_${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
+            cp ../Left/Family_00/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
                 ./Merge.Consensus.fa
         fi
     elif [ ../Right/Family_00/GOOD.FAM.CHECK ];then
         HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
-        cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
+        cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
             ./Merge.aln.fa
-        cp ../Right/Family_00/Round_${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
+        cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
             ./Merge.Consensus.fa
     fi
 

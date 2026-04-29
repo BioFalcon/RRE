@@ -147,17 +147,13 @@ while [ ${Family} -lt ${NumFamilies} ];do
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
                             ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/02_CurrentConsensi.Left*Extended.bed \
-                            ./Round_00/02_CurrentConsensi.${LowerCase}.Round00.Extended.bed
-                        cp ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
+                            ./Round_00/02_CurrentConsensi.${LowerCase}.Round00.Extended.bed                            
+                        cp ${CentralDir}/Family_${Family}/Final/Final/Final.Consensus.RightSide.Coord \
+                            ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
+                        cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.consensus.fa \
                             ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
-
-                        #Calculate extension size
-                        ExtSize=$( cat ${LeftDir}/Family_${Family}/Round_00/08_CurrentConsensi.Left.Round00.ExtendedSide.Coord | \
-                        awk '{print $2 - $1}' )    
-
-                        #Check size of LEFT extension
-                        ModelLen=$( seqkit fx2tab --length --name ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa | cut -f2)
-
+                        cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.aln.fa \
+                            ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
                         #Generate Coord for Right
                         echo -e "$(( ${ModelLen} - ${ExtSize} ))\t${ModelLen}" > ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
                 else
@@ -169,6 +165,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
                         ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
                     cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.Extension.Coord.bed \
                         ./Round_00/02_CurrentConsensi.${LowerCase}.Round00.Extended.bed
+                    cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.aln.fa \
+                        ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
+                    cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.consensus.fa \
+                        ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
                 fi
 
             fi
@@ -177,22 +177,28 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #Symfrac_Thresh=$(grep -c ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa | awk '{print 50/$1}')
             Symfrac_Thresh=0.3 
 
-            ##Make HMM model 
-            hmmbuild \
-            --symfrac ${Symfrac_Thresh} \
-            --dna \
-            --cpu ${CPU} \
-            --informat afa \
-            --seed 1992 \
-            --fragthresh 1.0 \
-            -n ${RepeatID} \
-            --wnone \
-            ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.hmm \
-            ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
+            if [[ $1 == "Left" ]] || ( [[ $1 == "Right" ]] && [ ! -f ${LeftDir}/Family_${Family}/GOOD.FAM.CHECK ] );then
+                ##Make HMM model 
+                hmmbuild \
+                --symfrac ${Symfrac_Thresh} \
+                --dna \
+                --cpu ${CPU} \
+                --informat afa \
+                --seed 1992 \
+                --fragthresh 1.0 \
+                -n ${RepeatID} \
+                --wnone \
+                ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.hmm \
+                ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
 
-            cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.hmm \
-                ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
-            
+                cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.hmm \
+                    ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
+            else
+                ##Copy HMM model from left
+                cp ${LeftDir}/Family_${Family}/Round_00/05_CurrentConsensi.Left*Extended.hmm \
+                    ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
+            fi
+
             ##Make check
             > ./Round_00/GoodCHECK
         fi

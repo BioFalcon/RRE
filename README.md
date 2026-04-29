@@ -1,16 +1,16 @@
 # RRE – Recursive Repeat Extender
 
-Recursive Repeat Extender (RRE) is a Nextflow DSL2 pipeline for extending and polishing repeat consensus sequences produced by tools like RepeatModeler2. It also ships an alternative HEEA workflow for a different extension strategy.
+Recursive Repeat Extender (RRE) is a Nextflow DSL2 pipeline for extending and polishing repeat consensus sequences produced by tools like RepeatModeler2. It also ships an alternative HEEA workflow which employing an iterative extension strategy.
 
 ## Requirements
 - Nextflow ≥ 22.03.0-edge (DSL2 enabled)
-- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent, we provide a Docker repository contained in dockerhub under `biofalcon/rre` which is already included in the nextflow config file and should be pulled automatically)
+- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent, we provide a Docker container in dockerhub under `biofalcon/rre` which is already included in the nextflow config file and should be pulled automatically)
 - Repeat libraries produced by RepeatModeler2 (`.stk` **and** `.fa` )
   
 ## Inputs
 Required flags:
 - `--Genome` — genome FASTA
-- `--consensus` — consensus sequences FASTA (e.g. RepeatModeler2 output). Note that RRE expects sequence names to list the family classification after a `#` character (e.g. `>rnd-1_family-101#LTR`).
+- `--consensus` — consensus sequences FASTA (e.g. RepeatModeler2 output). Note that RRE expects sequence names to list the family classification after a `#` character (e.g. `>rnd-1_family-101#LTR`. By default, RRE avoids extending solo LTRs).
 - `--alnFile` — seed alignments in Stockholm (`.stk`) alignment format. Note that sequence names must match the entries in the `--consensus` file.
 - `--workflow` — either `RRE` or `HEEA`
 
@@ -45,7 +45,7 @@ git clone https://github.com/BioFalcon/RRE
 
 After cloning the repository, the `netflow.config` file need to be adjusted to run in the available compute environment.
 
-1) Run the pipeline (RRE workflow example):
+2) Run the pipeline (RRE workflow example):
 
 ```bash
 nextflow run RRE.nf \
@@ -63,8 +63,8 @@ Note: To run the HEEA workflow, set `--workflow HEEA` (same required inputs).
 ```bash
 nextflow run RRE.nf \
 	--Genome ./HumanGenome.fa \
-	--consensus ./examples/NormalRun/Consensi.fa \
-	--alnFile ./examples/NormalRun/Consensi.stk \
+	--consensus ./examples/NormalRun/Consensus.fa \
+	--alnFile ./examples/NormalRun/Consensus.stk \
 	--workflow RRE \
 	--outDir ./Results \
 ```
@@ -81,7 +81,7 @@ nextflow run RRE.nf \
 	--extension 90 \
 	--outDir ./Results \
 ```
-Extending ancient repeats is a challenging task and outputs should always be manually curated. We recommend monitoring the results of each round of extension carefully, as highly divergent families might produce incorrect outputs (e.g. inclusion of other families, truncated extension, etc.). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
+Extending ancient repeats is a challenging task and outputs should always be manually inspected. We recommend monitoring the results of each round of extension carefully, as highly divergent families might produce incorrect outputs (e.g. inclusion of other families, truncated extension, etc.). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
 
 Sometimes the alignments are not correct due to internal misalignments, leading to incorrect merged alignments. To correct this, we recommend manually making a new merged alignment including only the correct partial alignments. For example, one could merge specifically rounds 15 through 20 as follows:
 ```bash

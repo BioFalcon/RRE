@@ -4,7 +4,7 @@ Recursive Repeat Extender (RRE) is a Nextflow DSL2 pipeline for extending and po
 
 ## Requirements
 - Nextflow ≥ 22.03.0-edge (DSL2 enabled)
-- Apptainer/Singularity or Docker images (recommended to keep dependencies consistent, we provide a Docker container in dockerhub under `biofalcon/rre` which is already included in the nextflow config file and should be pulled automatically)
+- Apptainer/Singularity or Docker (recommended to keep dependencies consistent, we provide a Docker container in dockerhub under `biofalcon/rre` which is already included in the nextflow config file and should be pulled automatically)
 - Repeat libraries produced by RepeatModeler2 (`.stk` **and** `.fa` )
   
 ## Inputs

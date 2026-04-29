@@ -142,8 +142,8 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 if [ -f ${LeftDir}/Family_${Family}/GOOD.FAM.CHECK ];then
                         #Determine highest good left round
                         HighestRound=$( ls ${LeftDir}/Family_${Family}/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Left\///;s/.*\///"| tail -1 )
-                        cp ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.aln.fa \
-                            ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
+                        tac -b -r -s "^>"  ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.aln.fa \
+							> ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
                             ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/02_CurrentConsensi.Left*Extended.bed \

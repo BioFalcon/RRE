@@ -296,9 +296,9 @@ while [ ${Family} -lt ${NumFamilies} ];do
             awk -v Side=${LowerCase} '{OFS="\t"}{ 
             FragLen=int( 1.10 * ($3 - $2) );
             if (Side == "Left"){
-                    if( $10 == "+"){print $7,$8,$8 + FragLen,".",$11,$10}else{print $7,$9 - FragLen,$9,".",$11,$10}
+                    if( $10 == "+"){print $7,$8,$8 + FragLen,".",$11,$10}else{print $7,$8 - FragLen,$8,".",$11,$10}
             } else {
-                    if( $10 == "+"){print $7,$9 - FragLen,$9,".",$11,$10}else{print $7,$8,$8 + FragLen,".",$11,$10}
+                    if( $10 == "+"){print $7,$9 - FragLen,$9,".",$11,$10}else{print $7,$9,$9 + FragLen,".",$11,$10}
             }
             }'  > ./Round_${CurrRound}/00_CurrentConsensi.${LowerCase}.Round${CurrRound}.Raw.bed
 

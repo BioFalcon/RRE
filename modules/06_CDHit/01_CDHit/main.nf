@@ -59,8 +59,8 @@ process CDHit{
 
     #Extract stk files
     ##Make index
-    seqkit faidx RedundantConsensi.fa.merged
-    seqkit faidx Extended.fa
+    seqkit faidx -U RedundantConsensi.fa.merged
+    seqkit faidx -U Extended.fa
 
     > RedundantConsensi.fa.merged.stk
     ##For extended sequences

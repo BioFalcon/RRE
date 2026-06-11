@@ -73,7 +73,7 @@ process CDHit{
             seqkit replace -p "-" -s -r "." | \\
             seqkit fx2tab | \\
             cut -f1,2 | \\
-            sed 's/__Window.*\\t/\\t/;s/)\\t/\\t/;s/(/_/;s/)___.*//' \\
+            sed 's/__Window.*\\t/\\t/;s/)\\t/\\t/;s/(/_/;s/)___.*\\t/\\t/' \\
         >> RedundantConsensi.fa.merged.stk
         echo "//" >> RedundantConsensi.fa.merged.stk
     done

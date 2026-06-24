@@ -367,7 +367,7 @@ ENV PythonLibs="tqdm==4.65.0 pandas==2.0.3  portion==2.4.1 \
                 biopython==1.81 configparser==6.0.1 dendropy==4.5.2 \
                 psutil==5.9.8 scipy==1.12.0 pybedtools==0.9.1 \
                 pysam==0.22.0 polars==1.5.0 seaborn==0.13.2 \
-                xopen==2.0.2 drmaa==0.7.6"
+                xopen==2.0.2 drmaa==0.7.6 scikit-learn==1.9.0"
 
 RUN pip3 install ${PythonLibs}
 

@@ -498,35 +498,12 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --thread ${CPU} \
                 --lexp -1.5 \
                 --lop 0.5 \
+				--nofft \
                 --add ./Round_${PrevRound}/05_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.aln.fa \
                 ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa | \
             sed "s/${LowerCase}R${PrevRound}/&DUP/" | \
             sed "s/Central/&DUP/" \
-            > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp3.aln.fa
-
-			if [ ${CurrRound} -gt 1 ];then
-				#merge with round -2
-
-				extraRound=$(echo ${PrevRound} | awk '{printf "%02d\n", $1-1}')
-
-				mafft \
-					--localpair \
-					--maxiterate 1000 \
-					--thread ${CPU} \
-					--lexp -1.5 \
-					--lop 0.5 \
-					--add ./Round_${PrevRound}/05_CurrentConsensi.${LowerCase}.Round${extraRound}.Extended.aln.fa \
-					./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp3.aln.fa | \
-				sed "s/${LowerCase}R${PrevRound}/&DUP/" | \
-				sed "s/Central/&DUP/" \
-				> ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp4.aln.fa
-
-				cp ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp4.aln.fa ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp1.aln.fa
-
-			else
-				#copy merge with round -1
-				cp ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp3.aln.fa ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp1.aln.fa
-			fi
+            > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp1.aln.fa
 
             #Clean alignment with vertical script
             python3 ../Staging/${VerticalScript} \

@@ -497,8 +497,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --maxiterate 1000 \
                 --thread ${CPU} \
                 --lexp -1.5 \
-                --lop 0.5 \
-				--nofft \
+                --lop -0.5 \
                 --add ./Round_${PrevRound}/05_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.aln.fa \
                 ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa | \
             sed "s/${LowerCase}R${PrevRound}/&DUP/" | \

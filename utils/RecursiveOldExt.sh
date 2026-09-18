@@ -498,8 +498,8 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --thread ${CPU} \
                 --lexp -1.5 \
                 --lop 0.5 \
-                --add ./Round_${PrevRound}/05_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.aln.fa \
-                ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa | \
+                --add ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa \
+				./Round_${PrevRound}/05_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.aln.fa | \
             sed "s/${LowerCase}R${PrevRound}/&DUP/" | \
             sed "s/Central/&DUP/" \
             > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp1.aln.fa
@@ -519,7 +519,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #> ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
 
             #Merge alignment with previous rounds
-            mafft-profile -g -0.5 \
+            mafft-profile \
                 ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2.aln.fa \
                 ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa | \
             seqkit grep -v -r -p "DUP" \

@@ -9,6 +9,8 @@ import sys
 import polars as pl
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import find_peaks, peak_widths
+
 
 ##Functions 
 def DF_to_Fasta(DF, OutFile):
@@ -106,6 +108,7 @@ def main():
     Zero         = False
     ZeroOnly     = False
     FirstPeak    = False
+	ThresholdRelaxation = 0.02
 
     #Parse arguments
     for opt, arg in options:
@@ -258,10 +261,29 @@ def main():
                     PlotsLoop.append( plt.figure() )
                     PlotsLoop[idx], axs = plt.subplots(nrows=len(StepWindow)+1, ncols=1, figsize=(16, 8), sharey=True,sharex=True)
                     axs[0].plot(range(0,len(Bits_Sliding)), Bits_Sliding, color="#4a74f0")
-                for posSlope in range( SelectedPeaks[idx] , 100):
-                    if Slope[posSlope] > 0:
-                        break
-                posSlopePos = [x/100 for x in range(-50,100)][posSlope]
+
+					x_grid = np.arange(-0.50, 1.00, 0.01)
+					peak_idx = SelectedPeaks[idx]
+
+					# rel_height is measured down from the peak prominence:
+					# 0.5 gives the half-prominence width.
+					width_result = peak_widths(
+						DensiVal,
+						[peak_idx],
+						rel_height=0.5
+					)
+
+					left_intersection = width_result[2][0]
+
+					# Convert the fractional array index to a Bits value.
+					posSlopePos = np.interp(
+						left_intersection,
+						np.arange(len(x_grid)),
+						x_grid
+					)
+
+					posSlopePos = max(0.0, posSlopePos)
+
                 for idx2, CurrWindow in enumerate(StepWindow):
                     ##Calculate where to cut 
                     ToKeep=[]

@@ -262,48 +262,14 @@ def main():
                     PlotsLoop[idx], axs = plt.subplots(nrows=len(StepWindow)+1, ncols=1, figsize=(16, 8), sharey=True,sharex=True)
                     axs[0].plot(range(0,len(Bits_Sliding)), Bits_Sliding, color="#4a74f0")
 
-					x_grid = np.arange(-0.50, 1.00, 0.01)
+                for posSlope in range( SelectedPeaks[idx] , 100):
+                    if Slope[posSlope] > 0:
+                        break
+                posSlopePos = [x/100 for x in range(-50,100)][posSlope]
 
-					peak_idx = SelectedPeaks[idx]
-					peak_pos = x_grid[peak_idx]
+				# Failsafe: cap the actual filtering threshold at 0.1
+				posSlopePos = min(posSlopePos, 0.1)
 
-					# Find the first local valley to the right of the peak.
-					valley_idx = None
-
-					for i in range(peak_idx + 1, len(DensiVal) - 1):
-						if DensiVal[i] <= DensiVal[i - 1] and DensiVal[i] < DensiVal[i + 1]:
-							valley_idx = i
-							break
-
-					if valley_idx is not None:
-						valley_pos = x_grid[valley_idx]
-
-						# 0.0 = peak, 0.5 = halfway, 1.0 = valley
-						PeakValleyFraction = 0.50
-
-						posSlopePos = (
-							peak_pos
-							+ PeakValleyFraction * (valley_pos - peak_pos)
-						)
-
-						print(
-							f"Peak: {peak_pos:.3f}, "
-							f"valley: {valley_pos:.3f}, "
-							f"fraction: {PeakValleyFraction:.2f}, "
-							f"cutoff: {posSlopePos:.3f}"
-						)
-					else:
-						# No valley exists to the right of the peak.
-						# Fall back to the peak itself.
-						valley_pos = None
-						posSlopePos = peak_pos
-
-						print(
-							f"Peak: {peak_pos:.3f}; "
-							f"no right-side valley found; "
-							f"using peak as cutoff: {posSlopePos:.3f}"
-						)
-						
                 for idx2, CurrWindow in enumerate(StepWindow):
                     ##Calculate where to cut 
                     ToKeep=[]

@@ -9,8 +9,6 @@ import sys
 import polars as pl
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import find_peaks, peak_widths
-
 
 ##Functions 
 def DF_to_Fasta(DF, OutFile):
@@ -108,7 +106,6 @@ def main():
     Zero         = False
     ZeroOnly     = False
     FirstPeak    = False
-	ThresholdRelaxation = 0.02
 
     #Parse arguments
     for opt, arg in options:
@@ -261,15 +258,12 @@ def main():
                     PlotsLoop.append( plt.figure() )
                     PlotsLoop[idx], axs = plt.subplots(nrows=len(StepWindow)+1, ncols=1, figsize=(16, 8), sharey=True,sharex=True)
                     axs[0].plot(range(0,len(Bits_Sliding)), Bits_Sliding, color="#4a74f0")
-
                 for posSlope in range( SelectedPeaks[idx] , 100):
                     if Slope[posSlope] > 0:
                         break
                 posSlopePos = [x/100 for x in range(-50,100)][posSlope]
-
-				# Failsafe: cap the actual filtering threshold at 0.1
-				posSlopePos = min(posSlopePos, 0.1)
-
+                # Failsafe: cap the actual filtering threshold at 0.1
+                posSlopePos = min(posSlopePos, 0.1)
                 for idx2, CurrWindow in enumerate(StepWindow):
                     ##Calculate where to cut 
                     ToKeep=[]

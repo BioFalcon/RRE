@@ -263,27 +263,47 @@ def main():
                     axs[0].plot(range(0,len(Bits_Sliding)), Bits_Sliding, color="#4a74f0")
 
 					x_grid = np.arange(-0.50, 1.00, 0.01)
+
 					peak_idx = SelectedPeaks[idx]
+					peak_pos = x_grid[peak_idx]
 
-					# rel_height is measured down from the peak prominence:
-					# 0.5 gives the half-prominence width.
-					width_result = peak_widths(
-						DensiVal,
-						[peak_idx],
-						rel_height=0.5
-					)
+					# Find the first local valley to the right of the peak.
+					valley_idx = None
 
-					left_intersection = width_result[2][0]
+					for i in range(peak_idx + 1, len(DensiVal) - 1):
+						if DensiVal[i] <= DensiVal[i - 1] and DensiVal[i] < DensiVal[i + 1]:
+							valley_idx = i
+							break
 
-					# Convert the fractional array index to a Bits value.
-					posSlopePos = np.interp(
-						left_intersection,
-						np.arange(len(x_grid)),
-						x_grid
-					)
+					if valley_idx is not None:
+						valley_pos = x_grid[valley_idx]
 
-					posSlopePos = max(0.0, posSlopePos)
+						# 0.0 = peak, 0.5 = halfway, 1.0 = valley
+						PeakValleyFraction = 0.50
 
+						posSlopePos = (
+							peak_pos
+							+ PeakValleyFraction * (valley_pos - peak_pos)
+						)
+
+						print(
+							f"Peak: {peak_pos:.3f}, "
+							f"valley: {valley_pos:.3f}, "
+							f"fraction: {PeakValleyFraction:.2f}, "
+							f"cutoff: {posSlopePos:.3f}"
+						)
+					else:
+						# No valley exists to the right of the peak.
+						# Fall back to the peak itself.
+						valley_pos = None
+						posSlopePos = peak_pos
+
+						print(
+							f"Peak: {peak_pos:.3f}; "
+							f"no right-side valley found; "
+							f"using peak as cutoff: {posSlopePos:.3f}"
+						)
+						
                 for idx2, CurrWindow in enumerate(StepWindow):
                     ##Calculate where to cut 
                     ToKeep=[]

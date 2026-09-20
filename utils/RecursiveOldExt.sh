@@ -519,7 +519,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #> ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
 
             #Merge alignment with previous rounds
-            mafft-profile \
+            mafft-profile -g -0.5 \
                 ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2.aln.fa \
                 ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa | \
             seqkit grep -v -r -p "DUP" \

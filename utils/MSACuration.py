@@ -263,7 +263,7 @@ def main():
                         break
                 posSlopePos = [x/100 for x in range(-50,100)][posSlope]
                 # Failsafe: cap the actual filtering threshold at 0.1
-                posSlopePos = min(posSlopePos, 0.08)
+                posSlopePos = min(posSlopePos, 0.1)
                 for idx2, CurrWindow in enumerate(StepWindow):
                     ##Calculate where to cut 
                     ToKeep=[]

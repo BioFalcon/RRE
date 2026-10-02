@@ -6,6 +6,8 @@ process Polishing {
     path(outDir)
     path(CoverageScript)
     path(CurateScript)
+    path(MSASplitScript)
+    path(EdgeCleaningScript)
     path(GenomeFasta)
     path(HMMDB_Genome)
 
@@ -159,7 +161,8 @@ process Polishing {
                         --genome ./Staging/${GenomeFasta} \\
                         --size \${consLen} \\
                         --target ${params.polishCoverage} \\
-                        --window ${params.polishWindow}
+                        --window ${params.polishWindow} \\
+                        --maxSeqs ${params.polishMaxSeqs}
 
                         #Define if sensitive alignment can be done
                         MafftPars="--localpair"
@@ -201,34 +204,80 @@ process Polishing {
                             mv ./Family_\${CurrFamily}/07_Polished.Curated__Peak0.aln.fa ./Family_\${CurrFamily}/07_Polished.Curated.aln.fa
                             mv ./Family_\${CurrFamily}/07_Polished.Curated.Consensus__Peak0.fa ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa
 
-                            #If new consensus went overboard, pass on the previous consensus
-                            if [[ \$(seqkit stats -T ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa | cut -f5 | sed '1d') -gt \$( echo \${consLen} | awk '{print int(\$1*${params.polishLengthLimitMultiplier})}' ) ]];then
-                                cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa
-                                cp ../Merge/Family_\${CurrFamily}/FinalConsensi.aln.fa ./Family_\${CurrFamily}/07_Polished.Curated.aln.fa
-                                touch ./Family_\${CurrFamily}/07_Polished.Curated.bed
-                                echo "Coverage went overboard, passing on previous consensus" > ./Family_\${CurrFamily}/99_CoverageWarning
-                            fi
-                            
-                            #If consensus is empty, add a base so it doesnt fail
-                            if [[ \$(seqkit stats -T ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa | cut -f5 | sed '1d') -eq 0 ]];then
-                                echo "A" >> ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa
-                            fi
-                            cp ./Family_\${CurrFamily}/05_SequenceCoverage.IndivHits.bed ./Family_\${CurrFamily}/07_Polished.Curated.bed
-                        fi
+                            #Split different families
+                            ./Staging/${MSASplitScript} \\
+                            --input ./Family_\${CurrFamily}/07_Polished.Curated.aln.fa \\
+                            --output ./Family_\${CurrFamily}/08_Polished.Curated.Split \\
+                            --min_cov 0.65 \\
+                            --min_family_size 5 
 
+                            #Check if subfamilies were created
+                            if [ -d ./Family_\${CurrFamily}/08_Polished.Curated.Split_subfamilies ];then
+                                FamilyCounter=1
+                                #Make a link to each subfamily
+                                for SubFam in \$(seqkit stats -T ./Family_\${CurrFamily}/08_Polished.Curated.Split_subfamilies/*| sed '1d'| awk '\$4>=5{print \$1}');do
+                                    cp --remove-destination \${SubFam} ./Family_\${CurrFamily}/09_Polished.Curated.Split_SubFamily\${FamilyCounter}.aln.fa
+
+                                    #Determine cutoff for gaps
+                                    if [ \$(seqkit stats -T ./Family_\${CurrFamily}/09_Polished.Curated.Split_SubFamily\${FamilyCounter}.aln.fa | cut -f4 | sed '1d') -gt 10 ];then
+                                        GapCutoff=5
+                                    else
+                                        GapCutoff=\$(seqkit stats -T ./Family_\${CurrFamily}/09_Polished.Curated.Split_SubFamily\${FamilyCounter}.aln.fa | cut -f4 | sed '1d'| awk 'function ceil(x, y){y=int(x); return(x>y?y+1:y)}{print ceil(\$1*0.3)}')
+                                    fi
+                                    
+                                    #Clean up alignment edges and gappy regions
+                                    Limit=\$(echo ${params.extension} | awk '{print int(\$1*0.5)}')
+                                    if [[ \$(seqkit stats -T ./Family_\${CurrFamily}/09_Polished.Curated.Split_SubFamily\${FamilyCounter}.aln.fa | cut -f6 | sed '1d')  -gt ${params.extension} ]];then
+                                        ./Staging/${EdgeCleaningScript} \\
+                                        --input ./Family_\${CurrFamily}/09_Polished.Curated.Split_SubFamily\${FamilyCounter}.aln.fa \\
+                                        --output ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${FamilyCounter} \\
+                                        --seqID \${Repeat}__InnerFfamily\${FamilyCounter} \\
+                                        --minSeqs \${GapCutoff} \\
+                                        --limit \${Limit}
+                                    else
+                                        ./Staging/${EdgeCleaningScript} \\
+                                        --input ./Family_\${CurrFamily}/09_Polished.Curated.Split_SubFamily\${FamilyCounter}.aln.fa \\
+                                        --output ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${FamilyCounter} \\
+                                        --seqID \${Repeat}__InnerFfamily\${FamilyCounter} \\
+                                        --minSeqs \${GapCutoff} \\
+                                        --limit 1
+                                    fi
+
+                                    FamilyCounter=\$((FamilyCounter+1))
+                                done
+                            else
+                                cp --remove-destination ./Family_\${CurrFamily}/07_Polished.Curated.aln.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.aln.fa
+                                cp --remove-destination ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.Consensus.fa
+                            fi
+
+                            #If new consensus went overboard, pass on the previous consensus
+                            for SubFam in \$(ls ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily*aln.fa);do
+                                SubFamNum=\$(echo \${SubFam} | sed 's/.*SubFamily//;s/\\..*//')
+                                if [[ \$(seqkit stats -T ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.Consensus.fa | cut -f5 | sed '1d') -gt \$( echo \${consLen} | awk '{print int(\$1*${params.polishLengthLimitMultiplier})}' ) ]];then
+                                    cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.Consensus.fa
+                                    cp ../Merge/Family_\${CurrFamily}/FinalConsensi.aln.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.aln.fa
+                                    echo "Consensus too long, rolled back to merged model" > ./Family_\${CurrFamily}/99_CoverageWarning
+                                fi
+
+                                #If consensus is empty, add a base so it doesnt fail
+                                if [[ \$(seqkit stats -T ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.Consensus.fa | cut -f5 | sed '1d') -eq 0 ]];then
+                                    echo "A" >> ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.Consensus.fa
+                                    cp ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.Consensus.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily\${SubFamNum}.aln.fa
+                                fi
+                            done
+                        fi
                     else
-                        cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa
-                        cp ../Merge/Family_\${CurrFamily}/FinalConsensi.aln.fa ./Family_\${CurrFamily}/07_Polished.Curated.aln.fa
-                        touch ./Family_\${CurrFamily}/07_Polished.Curated.bed
+                        cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.Consensus.fa
+                        cp ../Merge/Family_\${CurrFamily}/FinalConsensi.aln.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.aln.fa
+                        touch ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.bed
                         echo "Coverage went overboard, passing on previous consensus" > ./Family_\${CurrFamily}/99_CoverageWarning
                     fi
                     
                 else
                     #If consensus is empty, create empty files
-                    cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/07_Polished.Curated.Consensus.fa
-                    echo A >> ./Family_\${CurrFamily}/05_Polishing.Curated.Consensus.fa 
-                    cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/07_Polished.Curated.aln.fa
-                    touch ./Family_\${CurrFamily}/07_Polished.Curated.bed
+                    cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.Consensus.fa
+                    echo A >> ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.Consensus.fa
+                    cp ../Merge/Family_\${CurrFamily}/FinalConsensi.consensus.fa ./Family_\${CurrFamily}/10_Polished.Curated.Split_SubFamily1.aln.fa
                     #Make waring file
                     echo "Consensus is empty, passing on previous consensus" > ./Family_\${CurrFamily}/99_CoverageWarning
                 fi

@@ -26,16 +26,23 @@ def usage():
     print("--target          |-T\t Min coverage to aim for (Default:25)")
     print("--percentile      |-P\t Percentile to cutoff (Default:5)")
     print("--window          |-W\t Window to expand the sequence (Default:10000)")
+    print("--merge           |-M\t Distance to merge nearby coordinates (Default:500)")
+    print("--percCut         |-C\t Percentage of median coverage to cutoff (Default:0.40)")
+    print("--maxSeqs         |-M\t Maximum number of sequences to obtain (Default:100)")
+    print("--covWindow       |-W\t Window to merge nearby uncovered regions (Default:25)")
+    print("--threshDrop      |-D\t Threshold for sharp drop in score (Default:0.10)")
     print("--help            |-h\t This beautiful help message :)")
     exit()
 
 def main():
     try:
         options, remainder = getopt.getopt( sys.argv[1:],
-                                        'i:o:S:G:T:P:W:M:C:M:h', 
+                                        'i:o:S:G:T:P:W:M:C:M:W:h', 
                                         ['input=','output=','size=',
                                          'target=','percentile=','genome=',
-                                         'window=','merge=','percCut','maxSeqs=', 'help'] )
+                                         'window=','merge=','percCut=',
+                                         'maxSeqs=','covWindow=','threshDrop=',
+                                         'help'] )
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -49,6 +56,8 @@ def main():
     percCut=0.40
     LenThresh=1.25
     maxSeqs=100
+    covWindow=25
+    threshDrop=0.10
     for opt, arg in options:
         if opt in ('--input','-i'):
             input = arg
@@ -70,6 +79,10 @@ def main():
             percCut=float(arg)
         elif opt in ('--maxSeqs','-M'):
             maxSeqs=int(arg)
+        elif opt in ('--covWindow','-W'):
+            covWindow=int(arg)
+        elif opt in ('--threshDrop','-D'):
+            threshDrop=float(arg)
         elif opt in ('--help','-h'):
             usage()
 
@@ -124,21 +137,36 @@ def main():
     currLine=0
     windowCounter=0
 
+    #Filter List for sharp drops in score
+    Drops = np.where(-np.gradient(np.array(bedBlast[4]),edge_order=1)/np.max(bedBlast[4])  > threshDrop)[0]
+    #Keep at least 5 entries if there are drops
+    Drops = Drops[Drops > 5]
+    if len(Drops) > 0:
+        bedBlast_Filt=bedBlast.iloc[0:Drops[0]]
+    else:
+        bedBlast_Filt=bedBlast
+    
     #Main loop
     while coverageAchieved == False:
         #Check if there are still regions to cover
-        if (currLine >= bedConsCoord.shape[0]):
+        if (currLine >= bedBlast_Filt.shape[0]):
             break
 
         #Decide if chunk is already covered
-        if ( uncoverRegions[ bedConsCoord.iloc[currLine][0]:bedConsCoord.iloc[currLine][1]] >= targetSeqs ).any():
+        if ( uncoverRegions[ bedConsCoord.iloc[currLine][0]:bedConsCoord.iloc[currLine][1]] >= targetSeqs ).all():
             currLine+=1
             pbar.update(1)
-            if ( (uncoverRegions >= 25).all() ) or ( currLine == bedConsCoord.shape[0]-1 ):
+            if ( (uncoverRegions >= targetSeqs).all() ) or ( currLine == bedConsCoord.shape[0]-1 ):
                 break
         else:
+            #Skip if an entry was already used
+            if useEntry[currLine] == 1:
+                currLine+=1
+                pbar.update(1)
+                continue
+
             #Extract current entry
-            currentEntry = bedBlast.iloc[currLine]
+            currentEntry = bedBlast_Filt.iloc[currLine]
 
             #Perform window expansion
             expandedEntry = [ currentEntry[0], currentEntry[1]-window, currentEntry[2]+window, currentEntry[5] ]
@@ -152,6 +180,13 @@ def main():
 
             #Skip if an entry was already used
             if ( (useEntry[windowEntry.index] == 1).any() ):
+                #Remove entries that were already used
+                windowEntry = windowEntry[ useEntry[windowEntry.index] == 0 ]
+                #pbar.update(1)
+                #continue
+
+            #If no entries are left, skip to next iteration 
+            if windowEntry.shape[0] == 0:
                 pbar.update(1)
                 continue
 
@@ -217,8 +252,27 @@ def main():
             #Update progress bar
             pbar.update(1)
 
+            #Remove small windows
+            uncoverRegions_covered=np.array([i for i, x in enumerate(np.array(uncoverRegions) >= targetSeqs) if x]+[len(uncoverRegions)])
+            uncoverRegions_uncovered=np.array([i for i, x in enumerate(np.array(uncoverRegions) < targetSeqs) if x])
+            if len(uncoverRegions_uncovered) > 0:
+                currIndex=0
+                while currIndex < len(uncoverRegions_uncovered):
+                    if (uncoverRegions_covered > uncoverRegions_uncovered[currIndex]).any():
+                        nextCover = uncoverRegions_covered[uncoverRegions_covered > uncoverRegions_uncovered[currIndex]][0]
+                        if (nextCover - uncoverRegions_uncovered[currIndex]) <= covWindow:
+                            uncoverRegions[uncoverRegions_uncovered[currIndex]:nextCover]=targetSeqs
+                    else:
+                        uncoverRegions[uncoverRegions_uncovered[currIndex]:]=targetSeqs
+                        break
+                    #Update currIndex to next uncovered position
+                    if (nextCover < uncoverRegions_uncovered).any():
+                        currIndex = [i for i, x in enumerate(nextCover < uncoverRegions_uncovered) if x][0]
+                    else:
+                        break
+
             #Decide if cycle should break
-            if ( (uncoverRegions >= targetSeqs).all() ) or ( currLine >= bedConsCoord.shape[0]-1 ) or ( maxSeqs == windowCounter ):
+            if ( (uncoverRegions >= targetSeqs).all() ) or ( currLine > bedBlast_Filt.shape[0] ) or ( maxSeqs == windowCounter ):
                 break
 
     #Close fasta file

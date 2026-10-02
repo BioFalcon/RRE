@@ -81,6 +81,7 @@ params.polishminHits                = 10
 params.polishLengthLimitMultiplier  = 1.5
 params.polishWindow                 = 10000
 params.polishCoverage               = 50
+params.polishMaxSeqs                = 200
 
 /************************************************
 ****                                         ****
@@ -137,6 +138,8 @@ RREOLDScript       = file("./utils/RecursiveOldExt.sh")
 CoordExtractScript = file("./utils/CoordinateExtraction.py")
 OutlierScript      = file("./utils/FamilyDetection.py")
 VerticalScript     = file("./utils/VerticalCleaning.py")
+MSASplitScript     = file("./utils/MSASplit.py")
+EdgeCleaningScript = file("./utils/EdgeCleaning.py")
 
 /************************************************
 ****                                         ****
@@ -261,6 +264,8 @@ workflow RRE{
         RREOLDScript
         VerticalScript
         CoverageScript
+        MSASplitScript
+        EdgeCleaningScript
 
     main:
     //////////////////////////////////////////////
@@ -305,9 +310,10 @@ workflow RRE{
                 outDir,
                 CoverageScript,
                 CurateScript,
+                MSASplitScript,
+                EdgeCleaningScript,
                 Genome,
                 HMMRDB )
-
     //////////////////////////////////////////////
     //Merging
     //////////////////////////////////////////////
@@ -315,6 +321,8 @@ workflow RRE{
            outDir,
            ConsensusFasta,
            consensusAln )
+    /*
+    */
     }
 }
 
@@ -338,6 +346,8 @@ workflow{
     RREOLDScript       = Channel.fromPath(RREOLDScript)
     CoordExtractScript = Channel.fromPath(CoordExtractScript)
     VerticalScript     = Channel.fromPath(VerticalScript)
+    MSASplitScript     = Channel.fromPath(MSASplitScript)
+    EdgeCleaningScript = Channel.fromPath(EdgeCleaningScript)
     hyperTCh           = Channel.from(hyperT)
 
     /************************
@@ -384,7 +394,9 @@ workflow{
                            RREScript.collect(),
                            RREOLDScript.collect(),
                            VerticalScript.collect(),
-                           CoverageScript.collect() )
+                           CoverageScript.collect(),
+                           MSASplitScript.collect(),
+                           EdgeCleaningScript.collect() )
 
     } else if ( params.workflow == "HEEA" ){
         HEEA( HMMSelection.out.splitText(by:1, file:true),

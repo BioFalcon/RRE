@@ -25,14 +25,14 @@ process CDHit{
     cp \${oldWorkDir}/${ConsensusFasta} \${oldWorkDir}/${ConsensusAln} ./
     
     #Make table with substitutions
-    ls ../WorkDir/*/Polishing/Family_*/07_Polished.Curated.Consensus.fa | \\
-        sed 's/.*WorkDir\\///;s/\\/Polishing\\//\\t/;s/\\/.*//'| awk '{OFS="\\t"}{printf("%s\\tSeq_%05d\\n",\$0,NR)}' \\
+    ls ../WorkDir/*/Polishing/Family_*/10*.Consensus.fa | \\
+        sed 's/.*WorkDir\\///;s/\\/Polishing\\//\\t/;s/\\/.*SubFamily/\\tSubFamily/;s/\\..*//'| awk '{OFS="\\t"}{printf("%s\\tSeq_%05d\\n",\$0,NR)}' \\
     > ExtendedIDs.table
 
     #Make fasta file with new IDs
     ID=00001
     > Extended.fa
-    for i in \$(ls ../WorkDir/*/Polishing/Family_*/07_Polished.Curated.Consensus.fa); do
+    for i in \$(ls ../WorkDir/*/Polishing/Family_*/10*.Consensus.fa); do
         seqkit replace -p "(.+)" -r "Seq_\${ID}" \$i >> Extended.fa
         ID=\$(echo \$ID | awk '{printf("%05d", \$1+1)}')
     done
@@ -67,9 +67,10 @@ process CDHit{
     for i in \$(grep Seq_ RedundantConsensi.fa.merged.fai| cut -f1);do
         Family=\$(grep \$i ExtendedIDs.table| cut -f2)
         ID=\$(grep \$i ExtendedIDs.table| cut -f1)
+        SubFamily=\$(grep \$i ExtendedIDs.table| cut -f3)
         echo "# STOCKHOLM 1.0" >> RedundantConsensi.fa.merged.stk
         echo -e "#=GF ID\\t\${i}" >> RedundantConsensi.fa.merged.stk
-        cat ../WorkDir/\${ID}/Polishing/\${Family}/07_Polished.Curated.aln.fa | \\
+        cat ../WorkDir/\${ID}/Polishing/\${Family}/10_Polished.Curated.Split_\${SubFamily}.aln.fa | \\
             seqkit replace -p "-" -s -r "." | \\
             seqkit fx2tab | \\
             cut -f1,2 | \\

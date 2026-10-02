@@ -35,7 +35,7 @@ process RRE_RecursiveExtension {
         -R ${params.maxRounds} \\
         -T ${params.noiseThreshold} \\
         -P ${params.percentVertical} \\
-        -V ${VerticalScript}
+        -V ${VerticalScript} \\
     """
 
 }

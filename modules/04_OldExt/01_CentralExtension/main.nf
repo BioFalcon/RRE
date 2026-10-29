@@ -202,18 +202,25 @@ process RRE_CentralExtension{
             cp ./Family_\${FamilyNum}/Round_\${RoundCentral}/05_CurrentConsensi.Round\${RoundCentral}.Extended.Curated__Peak0.aln.fa \\
                 ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.aln.fa
 
+            #Define match columns with RF (HandRF.py lives next to the other utils)
+            python3 \$(dirname \$(realpath ./Staging/${CurateScript}))/HandRF.py \\
+                --input ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.aln.fa \\
+                --output ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated \\
+                --minOcc ${params.rfMinOcc} \\
+                --name \${Repeat}
+
             #Replace Consensus with hmmer one
             hmmbuild \\
+                --hand \\
                 --dna \\
-                --informat afa \\
+                --informat stockholm \\
                 --seed 1992 \\
                 --cpu ${task.cpus} \\
-                --symfrac 0 \\
                 --fragthresh 1.0 \\
                 --wnone \\
                 -n \${Repeat} \\
                 ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.hmm \\
-                ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.aln.fa
+                ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.stk
 
             hmmemit \\
                 -c \\

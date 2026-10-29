@@ -17,6 +17,7 @@ process RRE_RecursiveExtension {
     tuple val(RepeatID), path("MERGE.GOOD.CHECK")
 
     script:
+    def AncientArgs = params.AncientMode ? "-M ${params.maxRetries} -K ${params.minConservation} -W ${params.supportWindow} -B ${params.minBits} -Q ${params.rfMinOcc}" : ""
     """
     bash ${RREScript} \\
         -i ${RepeatID} \\
@@ -35,7 +36,7 @@ process RRE_RecursiveExtension {
         -R ${params.maxRounds} \\
         -T ${params.noiseThreshold} \\
         -P ${params.percentVertical} \\
-        -V ${VerticalScript}
+        -V ${VerticalScript} ${AncientArgs}
     """
 
 }

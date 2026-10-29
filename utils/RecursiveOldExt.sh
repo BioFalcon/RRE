@@ -1,6 +1,13 @@
 #!/bin/bash
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:" opt
+#Defaults for the AncientMode-specific options
+maxRetries=3
+minConservation=0.45
+supportWindow=10
+minBits=30
+rfMinOcc=0.5
+
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -21,8 +28,20 @@ do
       T ) noiseThreshold="$OPTARG" ;;
       P ) percentVertical="$OPTARG" ;;
       V ) VerticalScript="$OPTARG" ;;
+      M ) maxRetries="$OPTARG" ;;
+      K ) minConservation="$OPTARG" ;;
+      W ) supportWindow="$OPTARG" ;;
+      B ) minBits="$OPTARG" ;;
+      Q ) rfMinOcc="$OPTARG" ;;
    esac
 done
+
+#HandRF.py lives next to the other utils
+HandRFScript=$(dirname $(realpath ${VerticalScript}))/HandRF.py
+if [ ! -f ${HandRFScript} ];then
+    echo "HandRF.py not found at ${HandRFScript}, exiting"
+    exit 1
+fi
     
 #Save nf directory into a variable
 oldWorkDir=$(pwd)
@@ -39,11 +58,82 @@ ExtensionSize=${Extension}
 AnchorSize=$(  echo ${ExtensionSize} | awk '{print int($1*1.5)}' )
 Increase=$(  echo ${ExtensionSize} | awk '{$0=$0*0.125;printf("%d\n",$0+=$0<0?0:0.9)}' )
 LongConsensus=False
-SecondGo=False
 
 ######################
 #####  Function  #####
 ######################
+
+#Build an HMM whose match states are the RF columns defined by HandRF.py,
+#and its consensus (one consensus base per match state, so HMM and consensus coordinates agree)
+#Usage: BuildHandHMM <aln.fa> <OutPrefix> <HMMName> <TrimSide: Left|Right|None>
+#Writes <OutPrefix>.stk, .hmm, .Consensus.fa and .support.tsv; replaces <aln.fa> by the trimmed alignment
+function BuildHandHMM() {
+    local AlnIn=$1
+    local Prefix=$2
+    local HMMName=$3
+    local TrimSide=$4
+
+    python3 ${HandRFScript} \
+        --input ${AlnIn} \
+        --output ${Prefix}.HandRF \
+        --minOcc ${rfMinOcc} \
+        --trimSide ${TrimSide} \
+        --minCons ${minConservation} \
+        --window ${supportWindow} \
+        --name ${HMMName} > ${Prefix}.HandRF.log || return 1
+
+    #Not enough match columns left to build a model
+    if [ $(awk '$1=="MATCH_COLUMNS"{print $2}' ${Prefix}.HandRF.log) -lt ${supportWindow} ];then
+        return 1
+    fi
+
+    cp ${Prefix}.HandRF.aln.fa ${AlnIn}
+    mv ${Prefix}.HandRF.stk ${Prefix}.stk
+    mv ${Prefix}.HandRF.support.tsv ${Prefix}.support.tsv
+
+    hmmbuild \
+        --hand \
+        --dna \
+        --cpu ${CPU} \
+        --informat stockholm \
+        --seed 1992 \
+        --fragthresh 1.0 \
+        --wnone \
+        -n ${HMMName} \
+        ${Prefix}.hmm \
+        ${Prefix}.stk > /dev/null || return 1
+
+    hmmemit -c ${Prefix}.hmm > ${Prefix}.Consensus.fa || return 1
+}
+
+#Write the coordinates of the outermost <Size> bases of a consensus, on the side being extended
+#Usage: SetOuterCoord <Consensus.fa> <Side> <Size> <OutCoord>
+function SetOuterCoord() {
+    local LenCons=$(seqkit fx2tab --length --name $1 | cut -f2)
+    if [[ $2 == "Left" ]];then
+        echo -e "1\t$(( $3 < LenCons ? $3 : LenCons ))" > $4
+    else
+        echo -e "$(( LenCons - $3 > 1 ? LenCons - $3 : 1 ))\t${LenCons}" > $4
+    fi
+}
+
+#Search and sampling settings for each retry level. A round that fails to extend is retried
+#from the last good model, searching from the very edge and, at higher levels, with a wider flank,
+#more sampled copies and a lower bit-score threshold. After maxRetries failed retries the side stops.
+function RetrySettings() {
+    local Level=$1
+    case ${Level} in
+        0|1) RoundExt=${ExtensionSize}
+             RoundSample=${SampleSeqs}
+             RoundMinBits=${minBits} ;;
+        2)   RoundExt=$(( ExtensionSize * 2 ))
+             RoundSample=$(( SampleSeqs * 3 / 2 ))
+             RoundMinBits=$(( minBits - 5 )) ;;
+        *)   RoundExt=$(( ExtensionSize * 2 ))
+             RoundSample=$(( SampleSeqs * 2 ))
+             RoundMinBits=$(( minBits - 10 )) ;;
+    esac
+}
 
 function HMMExtensionSides() {
 #Define starting variables
@@ -185,31 +275,36 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 mv ./Round_00/05_TEMP.aln.fa ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
             fi
         
-            #Cutoff for symfrac based on number of sequences
-            #Symfrac_Thresh=$(grep -c ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa | awk '{print 50/$1}')
-            Symfrac_Thresh=0.3 
-
             if [[ $1 == "Left" ]] || ( [[ $1 == "Right" ]] && [ ! -f ${LeftDir}/Family_${Family}/GOOD.FAM.CHECK ] );then
-                ##Make HMM model 
-                hmmbuild \
-                --symfrac ${Symfrac_Thresh} \
-                --dna \
-                --cpu ${CPU} \
-                --informat afa \
-                --seed 1992 \
-                --fragthresh 1.0 \
-                -n ${RepeatID} \
-                --wnone \
-                ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.hmm \
-                ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
+                ##Make HMM model with match columns defined by RF (hmmbuild --hand)
+                cp ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa \
+                    ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Model.aln.fa
+                BuildHandHMM \
+                    ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Model.aln.fa \
+                    ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated \
+                    ${RepeatID} \
+                    None || { echo -e "\nCould not build the Round00 model, exiting"; exit 1; }
 
                 cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.hmm \
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
+                cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa \
+                    ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
             else
                 ##Copy HMM model from left
                 cp ${LeftDir}/Family_${Family}/Round_00/05_CurrentConsensi.Left*Extended.hmm \
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
+                cp ${LeftDir}/Family_${Family}/Round_00/05_CurrentConsensi.Left*Extended.Consensus.fa \
+                    ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
             fi
+
+            ##Search window: the outer edge of the model, in the model's own coordinates
+            SetOuterCoord \
+                ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa \
+                ${LowerCase} \
+                ${ExtensionSize} \
+                ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.ExtendedSide.Coord
+
+            echo 0 > ./Round_00/NextRetryLevel
 
             ##Make check
             > ./Round_00/GoodCHECK
@@ -256,6 +351,12 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #Set previous round
             PrevRound=$(echo ${CurrRound} | awk '{printf "%02d\n", $1-1}')
 
+            #Retry level set by the previous round (0 after a successful extension)
+            RetryLevel=$(cat ./Round_${PrevRound}/NextRetryLevel 2>/dev/null || echo 0)
+            RetrySettings ${RetryLevel}
+            RoundFailed=False
+            echo -e "\n${LowerCase} round ${CurrRound}: retry level ${RetryLevel} (flank ${RoundExt}, ${RoundSample} copies, bits > ${RoundMinBits})"
+
             #HMMER Search
             nhmmer \
             --cpu ${CPU} \
@@ -274,7 +375,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             
             #Format HMMER output
             sed '/#/d; s/\s\{1,\}/\t/g' ./Round_${CurrRound}/00_CurrentConsensi.${LowerCase}.Round${CurrRound}.hmmout | \
-            awk '$14 > 30 {print}' \
+            awk -v MinBits=${RoundMinBits} '$14 > MinBits {print}' \
             > ./Round_${CurrRound}/00_CurrentConsensi.${LowerCase}.Round${CurrRound}.hmmout.tmp
             
             cp ./Round_${CurrRound}/00_CurrentConsensi.${LowerCase}.Round${CurrRound}.hmmout.tmp \
@@ -306,14 +407,14 @@ while [ ${Family} -lt ${NumFamilies} ];do
             if [[ $1 == "Left" ]];then
                 bedtools slop \
                     -s \
-                    -l ${ExtensionSize} \
+                    -l ${RoundExt} \
                     -r ${AnchorSize} \
                     -i ./Round_${CurrRound}/00_CurrentConsensi.${LowerCase}.Round${CurrRound}.Raw.bed \
                     -g <(cut -f1,2  ../Staging/${GenomeIndex}) > ./Round_${CurrRound}/01_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed
             else
                 bedtools slop \
                     -s \
-                    -r ${ExtensionSize} \
+                    -r ${RoundExt} \
                     -l ${AnchorSize} \
                     -i ./Round_${CurrRound}/00_CurrentConsensi.${LowerCase}.Round${CurrRound}.Raw.bed \
                     -g <(cut -f1,2  ../Staging/${GenomeIndex}) > ./Round_${CurrRound}/01_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed
@@ -325,7 +426,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             TotalLines=$(wc -l < ./Round_${CurrRound}/01_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed )
             > ./Round_${CurrRound}/02_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed
 
-            while [ $CounterSeqs -lt ${SampleSeqs} ];do
+            while [ $CounterSeqs -lt ${RoundSample} ];do
                 #Extract current line
                 head -n ${FileLine} ./Round_${CurrRound}/01_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed | tail -n 1  > ./Round_${CurrRound}/Temp.bed
 
@@ -356,7 +457,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     -a ./Round_${CurrRound}/02_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed \
                     -b ./Round_${PrevRound}/02_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.bed \
                     -wb | \
-                awk -v Increase=${ExtensionSize} -v OFMT='%f' '{OFS="\t"}{
+                awk -v Increase=${RoundExt} -v OFMT='%f' '{OFS="\t"}{
                     if($6=="+"){
                         if($2>$8 || sqrt(($8-$2)*($8-$2))< Increase ){
                             $2=$8-Increase;
@@ -378,7 +479,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     -a ./Round_${CurrRound}/02_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.bed \
                     -b ./Round_${PrevRound}/02_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.bed \
                     -wb | \
-                awk -v Increase=${ExtensionSize} -v OFMT='%f' '{OFS="\t"}{
+                awk -v Increase=${RoundExt} -v OFMT='%f' '{OFS="\t"}{
                     if($6=="+"){
                         if($3<$9 || sqrt(($9-$3)*($9-$3))< Increase ){
                             $3=$9+Increase;
@@ -434,9 +535,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
             #Check if there is enough sequences to continue
             if [ $( grep -c ">" ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa ) -lt 5 ];then
                 echo -e "\nNot enough sequences to continue"
-                break
+                RoundFailed=True
             fi
 
+            if [[ ${RoundFailed} == "False" ]];then
             #Make alignment of only selected sequences
             mafft \
                 --genafpair \
@@ -463,33 +565,25 @@ while [ ${Family} -lt ${NumFamilies} ];do
             mv ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Family${CurrFamily}__Peak0.aln.fa \
                 ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
 
-            #Make hmmer model out of this alignment
-            hmmbuild \
-                --fragthresh 1.0 \
-                --dna \
-                --cpu ${CPU} \
-                --seed 1992 \
-                -n ${RepeatID}__${CurrRound} \
-                --wnone \
-                --symfrac ${percentVertical} \
-            ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.hmm \
-            ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
-
-            #Get sequence
-            hmmemit \
-                -c \
-                ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.hmm \
-            > ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Consensus.fa
-
             #Make all sequences uppercase
             seqkit seq \
                     -u \
                     ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa \
                     > ./Round_${CurrRound}/05_TEMP.fa.aln
-            
+
             cp ./Round_${CurrRound}/05_TEMP.fa.aln \
                 ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
-            
+
+            #Trim the edge of the extension that is not conserved across copies (random flank),
+            #then make the hmmer model with match columns defined by RF, and its consensus
+            BuildHandHMM \
+                ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa \
+                ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended \
+                ${RepeatID}__${CurrRound} \
+                ${LowerCase} || RoundFailed=True
+            fi
+
+            if [[ ${RoundFailed} == "False" ]];then
             #Reconcile previous alignments
             ##Make alignment with previous round
             mafft \
@@ -552,29 +646,52 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --Side ${LowerCase} \
                 --BasesOverl 20
 
-            #Get extended size
+            #Get extended size: new consensus bases beyond the previous model, after trimming the unsupported edge
             ExtendedSize=$( cat ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord | \
                             awk '{print $2-$1}' )
 
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
-                if [[ ${SecondGo} == "False" ]];then
-                    #Remake Coord file to git a second go
-                    if [[ $1 == "Left" ]];then
-                        echo -e "0\t${ExtensionSize}" > ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
-                    else
-                        LengthConsensus=$(seqkit fx2tab --length --name ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus.fa | cut -f2)
-                        echo | awk -v LenCons=${LengthConsensus} -v Ext=${ExtensionSize} '{print LenCons-Ext"\t"LenCons}' > ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
-                    fi
-                    SecondGo=True
-                else 
-                    if [ ${ExtendedSize} -ne 0 ];then
-                        > ./Round_${CurrRound}/GoodCHECK
-                    fi
+                echo -e "\nOnly ${ExtendedSize} supported bases added (minimum ${Increase})"
+                RoundFailed=True
+            fi
+            fi
+
+            if [[ ${RoundFailed} == "True" ]];then
+                NextLevel=$(( RetryLevel + 1 ))
+
+                #Keep the failed attempt for inspection
+                FailedDir=./Failed_Round${CurrRound}_Retry${RetryLevel}
+                while [ -d ${FailedDir} ];do
+                    FailedDir=${FailedDir}_x
+                done
+                mv ./Round_${CurrRound} ${FailedDir}
+
+                if [[ ${NextLevel} -gt ${maxRetries} ]];then
+                    echo -e "\nNo supported extension after ${maxRetries} retries, stopping the ${LowerCase} side"
                     BreakNow=True
                     break
                 fi
+
+                #Restart this round from the last good model, searching from its outer edge
+                mkdir -p ./Round_${CurrRound}
+                for File in 02_CurrentConsensi.${LowerCase}.RoundXX.Extended.bed \
+                            05_CurrentConsensi.${LowerCase}.RoundXX.Extended.aln.fa \
+                            05_CurrentConsensi.${LowerCase}.RoundXX.Extended.hmm \
+                            05_CurrentConsensi.${LowerCase}.RoundXX.Extended.Consensus.fa \
+                            07_CurrentConsensi.${LowerCase}.RoundXX.Extended.Curated.aln.fa \
+                            07_CurrentConsensi.${LowerCase}.RoundXX.Extended.Curated.Consensus.fa;do
+                    cp ./Round_${PrevRound}/${File/XX/${PrevRound}} ./Round_${CurrRound}/${File/XX/${CurrRound}}
+                done
+
+                RetrySettings ${NextLevel}
+                SetOuterCoord \
+                    ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Consensus.fa \
+                    ${LowerCase} \
+                    ${RoundExt} \
+                    ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
+                echo ${NextLevel} > ./Round_${CurrRound}/NextRetryLevel
             else
-                SecondGo=False
+                echo 0 > ./Round_${CurrRound}/NextRetryLevel
             fi
 
             #Check if it has reached max rounds
@@ -669,7 +786,7 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
             cp ../Left/Family_00/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
                 ./Merge.Consensus.fa
         fi
-    elif [ ../Right/Family_00/GOOD.FAM.CHECK ];then
+    elif [ -f ../Right/Family_00/GOOD.FAM.CHECK ];then
         HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
         cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
             ./Merge.aln.fa

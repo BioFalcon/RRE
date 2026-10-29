@@ -73,6 +73,13 @@ params.hmmResults                  = ""
 //Parameter for AncientMode
 params.AncientMode                   = ""
 
+//AncientMode: model building and extension judgement
+params.rfMinOcc                    = 0.5   //Min. fraction of spanning sequences with a residue for a match (RF) column
+params.minConservation             = 0.45  //Min. mean frequency of the most common base at the new edge of an extension
+params.supportWindow               = 10    //Window, in match columns, used to judge the new edge
+params.minBits                     = 30    //Min. nhmmer bit score of hits used for extension
+params.maxRetries                  = 3     //Failed rounds retried (with relaxed search) before a side stops
+
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3
 

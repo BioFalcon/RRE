@@ -4,7 +4,8 @@
 #model with hmmbuild --hand, and iterate until the model is stable: few new hits and an almost unchanged consensus.
 #The exact consensus never settles for an old repeat (near-tied columns flip as the sample of copies shifts).
 #Iterating can also slowly recruit a related family, so refinement stops if the consensus drifts too far from
-#that of the first iteration, keeping the last model within the limit.
+#that of the first iteration, keeping the last model within the limit. An iteration whose model finds >10% fewer
+#hits than the previous one is discarded the same way.
 #Models are built as Dfam builds them: --maxinsertlen 10 (without it, hits bridge long insertions, often younger
 #TEs nested in the copies, and those count as copies of the repeat) and exponential entropy weighting (--eentexp,
 #to the default target of 0.62 bits/position), which down-weights densely covered columns more than sparse ones,
@@ -214,6 +215,10 @@ EOF
     echo -e "${k}\t${Hits}\t$(wc -l < ${Work}/Iter${It}.used.bed)\t${Copies}\t${Match}\t${CovTrim}\t$(grep -v ">" ${Work}/Iter${It}.Consensus.fa | tr -d '\n' | wc -c)\t${Gain}\t${Change}\t${Drift}" >> ${Out}.iterations.tsv
     echo "Iteration ${It}: ${Hits} hits (gain ${Gain}), ${Copies} copies after collapsing, ${Match} match columns (${CovTrim} trimmed at low coverage), consensus change ${Change}, drift ${Drift}"
 
+    if [ ${Gain} != "NA" ] && awk -v g=${Gain} 'BEGIN{exit !(g < -0.10)}';then
+        echo "Iteration ${It}: the model found ${Gain} fewer hits than the previous one, keeping the model of iteration ${Prev}"
+        break
+    fi
     if awk -v d=${Drift} -v m=${MaxDrift} 'BEGIN{exit !(d > m)}';then
         echo "Iteration ${It}: the consensus drifted more than ${MaxDrift} from iteration 1, keeping the model of iteration ${Prev}"
         break

@@ -19,6 +19,8 @@ def usage():
         print("--minCons     | -c\t Min. mean conservation (frequency of the most common base) over the window at the new edge (Default: 0.45)")
         print("--window      | -w\t Window size, in match columns, for the conservation check (Default: 10)")
         print("--minSeqs     | -n\t Min. number of residues for a match column to count as supported (Default: 5)")
+        print("--trimCoverage| -t\t Trim match columns at both ends with fewer residues than this fraction of the median")
+        print("                  \t residues per match column, e.g. 0.1 for a genome-wide model (Default: 0, no trimming)")
         print("--name        | -N\t Name for the #=GF ID line (Default: output prefix)")
         print("--help        | -h\t Show this help message and exit")
         exit()
@@ -72,7 +74,7 @@ def ColumnStats(Aln):
 
 def main():
     try:
-        options, remainder = getopt.getopt(sys.argv[1:], 'i:o:m:r:s:c:w:n:N:h', ['input=','output=','minOcc=','minRes=','trimSide=','minCons=','window=','minSeqs=','name=','help'])
+        options, remainder = getopt.getopt(sys.argv[1:], 'i:o:m:r:s:c:w:n:t:N:h', ['input=','output=','minOcc=','minRes=','trimSide=','minCons=','window=','minSeqs=','trimCoverage=','name=','help'])
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -85,6 +87,7 @@ def main():
     minCons  = 0.45
     window   = 10
     minSeqs  = 5
+    trimCov  = 0.0
     Name     = None
 
     #Parse options
@@ -107,6 +110,8 @@ def main():
             window = int(arg)
         elif opt in ('-n', '--minSeqs'):
             minSeqs = int(arg)
+        elif opt in ('-t', '--trimCoverage'):
+            trimCov = float(arg)
         elif opt in ('-N', '--name'):
             Name = arg
 
@@ -156,6 +161,23 @@ def main():
             Names = [n for n, h in zip(Names, HasRes) if h]
             Aln = Aln[HasRes]
 
+    ##Ends covered by only a few copies: trim from both ends while a match column has fewer residues
+    ##than trimCov times the median over all match columns
+    CovTrimmed = 0
+    RFCols = np.where(RF)[0]
+    if trimCov > 0 and len(RFCols) > 0:
+        MinRes = trimCov * np.median(NBase[RFCols])
+        Good = RFCols[NBase[RFCols] >= MinRes]
+        if len(Good) > 0:
+            ColsKeep = np.arange(Good[0], Good[-1] + 1)
+            CovTrimmed = int(RF.sum() - RF[ColsKeep].sum())
+            Aln = Aln[:, ColsKeep]
+            RF = RF[ColsKeep]
+            Spanning, NBase, MaxFreq = Spanning[ColsKeep], NBase[ColsKeep], MaxFreq[ColsKeep]
+            HasRes = (Aln != "-").any(axis=1)
+            Names = [n for n, h in zip(Names, HasRes) if h]
+            Aln = Aln[HasRes]
+
     ##Write per-column support table
     with open(Output + ".support.tsv", "w") as fh:
         fh.write("column\tRF\tspanning\tbases\tmaxfreq\n")
@@ -185,6 +207,7 @@ def main():
 
     print("MATCH_COLUMNS\t" + str(int(RF.sum())))
     print("TRIMMED_MATCH_COLUMNS\t" + str(Trimmed))
+    print("COVERAGE_TRIMMED_MATCH_COLUMNS\t" + str(CovTrimmed))
     print("SEQUENCES\t" + str(len(Names)))
 
 if __name__ == "__main__":

@@ -8,8 +8,9 @@ minBits=30
 rfMinOcc=0.5
 minCopies=10
 maxIdentity=auto
+refineIterations=8
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -37,6 +38,7 @@ do
       Q ) rfMinOcc="$OPTARG" ;;
       N ) minCopies="$OPTARG" ;;
       D ) maxIdentity="$OPTARG" ;;
+      G ) refineIterations="$OPTARG" ;;
    esac
 done
 
@@ -780,12 +782,14 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
             HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
             cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
                 ./Merge.aln.fa
+            for File in ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Columns.txt;do [ -f ${File} ] && cp ${File} ./Merge.Columns.txt; done
             cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
                 ./Merge.Consensus.fa
         else
             HighestRound=$( ls ../Left/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Left\///;s/.*\///"| tail -1 )
             cp ../Left/Family_00/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.aln.fa \
                 ./Merge.aln.fa
+            for File in ../Left/Family_00/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Columns.txt;do [ -f ${File} ] && cp ${File} ./Merge.Columns.txt; done
             cp ../Left/Family_00/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
                 ./Merge.Consensus.fa
         fi
@@ -793,8 +797,24 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
         HighestRound=$( ls ../Right/Family_00/Round_*/GoodCHECK | sed "s/\/GoodCHECK//;s/Right\///;s/.*\///"| tail -1 )
         cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.aln.fa \
             ./Merge.aln.fa
+        for File in ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Columns.txt;do [ -f ${File} ] && cp ${File} ./Merge.Columns.txt; done
         cp ../Right/Family_00/${HighestRound}/07_CurrentConsensi.Right*Extended.Curated.Consensus.fa \
             ./Merge.Consensus.fa
+    fi
+
+    #Genome-wide refinement of the final model: hits aligned with hmmalign, match columns by occupancy (--hand)
+    if [ ${refineIterations} -gt 0 ] && [ -f ./Merge.aln.fa ];then
+        echo -e "\nRefining the final model genome-wide (${refineIterations} iterations at most)"
+        bash ${UtilsDir}/RefineModel.sh \
+            -a ./Merge.aln.fa \
+            -d ${oldWorkDir}/${HMMRDB} \
+            -g ${oldWorkDir}/${Genome} \
+            -o ./${RepeatID}.Refined \
+            -n ${RepeatID} \
+            -t ${CPU} \
+            -I ${refineIterations} \
+            -Q ${rfMinOcc} \
+            -D ${maxIdentity} || echo "Refinement failed, the unrefined model is in Merge.aln.fa"
     fi
 
     #Make check

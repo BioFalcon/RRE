@@ -82,6 +82,7 @@ params.maxRetries                  = 3     //Failed rounds retried (with relaxed
 params.minCopies                   = 10    //Min. copies supporting each column of a new edge
 params.maxIdentity                 = "auto" //Identity above which copies (segmental duplications) are collapsed into one representative;
                                             //auto: halfway between the median pairwise identity of the copies and 1
+params.refineIterations            = 8      //Max. iterations of the final genome-wide refinement of the model (0: no refinement)
 
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3

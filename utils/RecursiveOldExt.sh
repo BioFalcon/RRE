@@ -9,8 +9,11 @@ rfMinOcc=0.5
 minCopies=10
 maxIdentity=auto
 refineIterations=8
+curationIdentityExp=2
+curationGapExp=0.5
+curationMaxThresh=0.1
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:A:Y:X:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -39,6 +42,9 @@ do
       N ) minCopies="$OPTARG" ;;
       D ) maxIdentity="$OPTARG" ;;
       G ) refineIterations="$OPTARG" ;;
+      A ) curationIdentityExp="$OPTARG" ;;
+      Y ) curationGapExp="$OPTARG" ;;
+      X ) curationMaxThresh="$OPTARG" ;;
    esac
 done
 
@@ -596,6 +602,9 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} \
                     --MinCoverage ${MinCoverageThresh} \
                     --StepWindow 25 \
+                    --identityExp ${curationIdentityExp} \
+                    --gapExp ${curationGapExp} \
+                    --MaxThresh ${curationMaxThresh} \
                     --firstPeak \
                     --Plots
 

@@ -83,6 +83,9 @@ params.minCopies                   = 10    //Min. copies supporting each column 
 params.maxIdentity                 = "auto" //Identity above which copies (segmental duplications) are collapsed into one representative;
                                             //auto: halfway between the median pairwise identity of the copies and 1
 params.refineIterations            = 8      //Max. iterations of the final genome-wide refinement of the model (0: no refinement)
+params.curationIdentityExp        = 2      //Alignment cleaning (MSACuration.py) in the extension rounds: column score is
+params.curationGapExp             = 0.5    //(1 - entropy)^curationIdentityExp * (1 - gap fraction)^curationGapExp,
+params.curationMaxThresh          = 0.1    //and the threshold used to filter columns is capped at curationMaxThresh
 params.centralRound                = false  //AncientMode: rebuild the starting model from a MAFFT alignment of the seed's copies plus
                                             //flanks before extending. By default the seed itself (its #=GC RF columns) is the starting model
 

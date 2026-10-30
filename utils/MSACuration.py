@@ -20,6 +20,10 @@ def DF_to_Fasta(DF, OutFile):
             File.write(Sequence[j:j+80] + "\n")
     File.close()    
 
+#Exponents of the trident-like column score: (1 - entropy)^IdentityExp * (1 - gap fraction)^GapExp
+IdentityExp = 2
+GapExp = 0.5
+
 def BitGap_Calc(DF):
     Gaps=[]
     Bits=[]
@@ -38,7 +42,7 @@ def BitGap_Calc(DF):
         NoGaps = CurrCol.filter(CurrCol[:,0] != "-")
         Probs = NoGaps["count"]/NoGaps["count"].sum()
         Tx = -1*(Probs*np.log2(Probs)).sum()*pow(Lmda, -1)
-        Ctrident = pow(( 1 - Tx), 2)*pow(( 1 - GapFrac),0.5)
+        Ctrident = pow(( 1 - Tx), IdentityExp)*pow(( 1 - GapFrac), GapExp)
         Bits.append( Ctrident )
         ##Calculate entropy
         #Entropy = -1*(Probs*np.log2(Probs)).sum()
@@ -58,6 +62,9 @@ def usage():
         print("--MainWindow   | -W\t Main Window size used to calculate the threshold used (Default: 100)")
         print("--StepWindow   | -S\t Comma delimited values of the values to use in the stepwise  (Default: 50,25,10,5,2)")
         print("--MinThresh    | -t\t Minimum threshold used to consider a peak as noise (Default: 0.5)")
+        print("--MaxThresh    | -X\t Cap on the threshold used to filter columns (Default: 0.1)")
+        print("--identityExp  | -A\t Exponent of the conservation term of the column score (Default: 2)")
+        print("--gapExp       | -G\t Exponent of the gap term of the column score (Default: 0.5)")
         print("--SeqID        | -I\t ID of the consensus sequence (Default: Consensus)")
         print("--Plots        | -P\t Generate plots (Default: False)")
         print("--NoiseThresh  | -T\t Threshold (peak value) to consider that alignment has no noise (Default: 0.2)")
@@ -89,7 +96,7 @@ def logmsg(input, output, MinCoverage, MainWindow, StepWindow, ID_Sequence, Plot
 ##Main function
 def main():
     try:
-        options, remainder = getopt.getopt(sys.argv[1:],'i:o:m:W:S:t:I:PN:ZOFh', ['input=','output=','MinCoverage=','MainWindow=','StepWindow=','MinThresh=','SeqID=','Plots','NoiseThresh=','short','zero','zeroOnly','firstPeak','help'])
+        options, remainder = getopt.getopt(sys.argv[1:],'i:o:m:W:S:t:X:A:G:I:PN:ZOFh', ['input=','output=','MinCoverage=','MainWindow=','StepWindow=','MinThresh=','MaxThresh=','identityExp=','gapExp=','SeqID=','Plots','NoiseThresh=','short','zero','zeroOnly','firstPeak','help'])
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -106,6 +113,7 @@ def main():
     Zero         = False
     ZeroOnly     = False
     FirstPeak    = False
+    MaxThresh    = 0.1
 
     #Parse arguments
     for opt, arg in options:
@@ -119,6 +127,14 @@ def main():
             MainWindow = int(arg)
         elif opt in ('--StepWindow','-S'):
             StepWindow = [int(i) for i in arg.split(",")]
+        elif opt in ('--MaxThresh','-X'):
+            MaxThresh = float(arg)
+        elif opt in ('--identityExp','-A'):
+            global IdentityExp
+            IdentityExp = float(arg)
+        elif opt in ('--gapExp','-G'):
+            global GapExp
+            GapExp = float(arg)
         elif opt in ('--SeqID','-I'):
             ID_Sequence = arg
         elif opt in ('--Plots','-P'):
@@ -262,8 +278,8 @@ def main():
                     if Slope[posSlope] > 0:
                         break
                 posSlopePos = [x/100 for x in range(-50,100)][posSlope]
-                # Failsafe: cap the actual filtering threshold at 0.1
-                posSlopePos = min(posSlopePos, 0.1)
+                # Failsafe: cap the actual filtering threshold (Default: 0.1)
+                posSlopePos = min(posSlopePos, MaxThresh)
                 for idx2, CurrWindow in enumerate(StepWindow):
                     ##Calculate where to cut 
                     ToKeep=[]

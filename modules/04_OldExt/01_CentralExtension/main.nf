@@ -129,40 +129,44 @@ process RRE_CentralExtension{
             fi
         fi
 
-        #The seed is already a full model (e.g. a refined model used in another genome): do not rebuild it from a
-        #MAFFT alignment of copies plus flanks, which for long, old repeats keeps only a short well-aligned core.
-        #Align this genome's copies to the seed model instead, and let the sides extend from it
-        if [ "${params.seedModel}" == "true" ] && [ \${SkipRounds} == "No" ];then
+        #By default the seed itself is the starting model and both sides extend from it: rebuilding it here from a
+        #MAFFT alignment of copies plus flanks (--centralRound) keeps only a short well-aligned core of long, old
+        #repeats. The model is built from the seed's own match columns (#=GC RF), and the sides use it as it is
+        if [ "${params.centralRound}" != "true" ] && [ \${SkipRounds} == "No" ];then
             Round=./Family_\${FamilyNum}/Round_01
             mkdir -p \${Round}
-            UtilsDir=\$(dirname \$(realpath ./Staging/${CurateScript}))
 
-            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --maxinsertlen 10 --eentexp -n \${Repeat} \\
-                \${Round}/06_Seed.hmm ${file(params.alnFile)} > /dev/null
-
-            #This genome's copies of the seed, best scoring first
-            head -n 2000 ./Family_\${FamilyNum}/Round_00/02_CurrentConsensi.Round00.Extended.bed \\
-                > \${Round}/02_CurrentConsensi.Round01.Extended.bed
-            bedtools getfasta -s -fi ./Staging/${Genome} -bed \${Round}/02_CurrentConsensi.Round01.Extended.bed \\
-                -fo \${Round}/03_CurrentConsensi.Round01.Extended.fa
-            bash \${UtilsDir}/CollapseNearIdentical.sh \${Round}/03_CurrentConsensi.Round01.Extended.fa ${task.cpus} ${params.maxIdentity}
-
-            hmmalign --dna --trim --outformat afa \${Round}/06_Seed.hmm \${Round}/03_CurrentConsensi.Round01.Extended.fa | \\
-                awk '/^>/{print; next}{gsub(/\\./,"-"); print toupper(\$0)}' \\
-                > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa
-
-            python3 \${UtilsDir}/HandRF.py \\
-                --input \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa \\
-                --output \${Round}/07_CurrentConsensi.Round01.Extended.Curated \\
-                --minOcc ${params.rfMinOcc} \\
-                --name \${Repeat}
             hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --fragthresh 1.0 --maxinsertlen 10 --eentexp -n \${Repeat} \\
-                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \\
-                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.stk > /dev/null
-            hmmemit -c \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \\
+                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm ${file(params.alnFile)} > /dev/null
+            hmmemit -c \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm | \\
+                awk '/^>/{print; next}{print toupper(\$0)}' \\
                 > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.Consensus.fa
 
-            echo "Seed used as the central model: \$(grep -c '>' \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa) copies aligned to it"
+            #The seed's match columns only, one column per model position
+            python3 - ${file(params.alnFile)} > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa <<'EOF'
+import sys
+Seqs, RF, Order = {}, "", []
+for line in open(sys.argv[1]):
+    line = line.rstrip("\\n")
+    if not line or line.startswith("//") or line.startswith("# STOCKHOLM"):
+        continue
+    if line.startswith("#=GC RF"):
+        RF += line.split()[-1]
+    elif not line.startswith("#"):
+        Name, Seq = line.split()[:2]
+        if Name not in Seqs:
+            Seqs[Name] = []; Order.append(Name)
+        Seqs[Name].append(Seq)
+Keep = [j for j, c in enumerate(RF) if c not in ".-~_"]
+for n in Order:
+    Row = "".join("".join(Seqs[n])[j] for j in Keep).upper().replace(".", "-")
+    if Row.strip("-"):
+        print(">" + n + "\\n" + Row)
+EOF
+            cp ./Family_\${FamilyNum}/Round_00/02_CurrentConsensi.Round00.Extended.bed \${Round}/02_CurrentConsensi.Round01.Extended.bed
+
+            echo "Seed used as the starting model: \$(grep "^LENG" \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm | awk '{print \$2}') positions, \$(grep -c '>' \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa) sequences"
+            > \${Round}/SeedModel
             > \${Round}/GoodCHECK
             SkipRounds=Yes
         fi
@@ -309,6 +313,13 @@ process RRE_CentralExtension{
                     ./Family_\${FamilyNum}/Final/FinalConsensi.aln.fa
                 cp ./Family_\${FamilyNum}/Round_\${LastSuccRound}/07_CurrentConsensi.Round\${LastSuccRound}.Extended.Curated.Consensus.fa \\
                     ./Family_\${FamilyNum}/Final/FinalConsensi.consensus.fa
+            fi
+
+            #A seed used as the starting model is passed to the sides with its HMM, to be used as it is
+            if [ -f ./Family_\${FamilyNum}/Round_\${LastSuccRound}/SeedModel ];then
+                cp ./Family_\${FamilyNum}/Round_\${LastSuccRound}/07_CurrentConsensi.Round\${LastSuccRound}.Extended.Curated.hmm \\
+                    ./Family_\${FamilyNum}/Final/FinalConsensi.hmm
+                > ./Family_\${FamilyNum}/Final/FinalConsensi.SeedModel
             fi
 
             #Copy coords that were used

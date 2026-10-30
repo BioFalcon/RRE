@@ -290,7 +290,18 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 mv ./Round_00/05_TEMP.aln.fa ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.aln.fa
             fi
         
-            if [[ $1 == "Left" ]] || ( [[ $1 == "Right" ]] && [ ! -f ${LeftDir}/Family_${Family}/GOOD.FAM.CHECK ] );then
+            if ( [[ $1 == "Left" ]] || ( [[ $1 == "Right" ]] && [ ! -f ${LeftDir}/Family_${Family}/GOOD.FAM.CHECK ] ) ) && \
+                [ -f ${CentralDir}/Family_${Family}/Final/FinalConsensi.SeedModel ];then
+                ##The seed is the starting model: use its HMM and match columns as they are
+                cp ${CentralDir}/Family_${Family}/Final/FinalConsensi.hmm \
+                    ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
+                cp ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa \
+                    ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
+                #Every seed position is a consensus position of the merged model (StitchMerge.py column calls)
+                grep -v ">" ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa | tr -d '\n' | \
+                    tr 'acgtn' 'ACGTN' > ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Columns.txt
+                echo >> ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Columns.txt
+            elif [[ $1 == "Left" ]] || ( [[ $1 == "Right" ]] && [ ! -f ${LeftDir}/Family_${Family}/GOOD.FAM.CHECK ] );then
                 ##Make HMM model with match columns defined by RF (hmmbuild --hand)
                 cp ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa \
                     ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Model.aln.fa

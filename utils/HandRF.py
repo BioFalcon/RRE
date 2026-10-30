@@ -167,6 +167,12 @@ def main():
         for n, s in zip(Names, Aln):
             fh.write(">" + n + "\n" + "".join(s) + "\n")
 
+    ##Write the match columns only (one column per consensus position, inserts dropped)
+    with open(Output + ".match.aln.fa", "w") as fh:
+        for n, s in zip(Names, Aln[:, RF]):
+            if (s != "-").any():
+                fh.write(">" + n + "\n" + "".join(s) + "\n")
+
     ##Write Stockholm with RF line
     Width = max([len(n) for n in Names] + [len("#=GC RF")]) + 1
     with open(Output + ".stk", "w") as fh:

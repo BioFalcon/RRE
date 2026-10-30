@@ -38,8 +38,9 @@ done
 
 #HandRF.py lives next to the other utils
 HandRFScript=$(dirname $(realpath ${VerticalScript}))/HandRF.py
-if [ ! -f ${HandRFScript} ];then
-    echo "HandRF.py not found at ${HandRFScript}, exiting"
+StitchScript=$(dirname $(realpath ${VerticalScript}))/StitchMerge.py
+if [ ! -f ${HandRFScript} ] || [ ! -f ${StitchScript} ];then
+    echo "HandRF.py or StitchMerge.py not found next to ${VerticalScript}, exiting"
     exit 1
 fi
     
@@ -90,6 +91,7 @@ function BuildHandHMM() {
     cp ${Prefix}.HandRF.aln.fa ${AlnIn}
     mv ${Prefix}.HandRF.stk ${Prefix}.stk
     mv ${Prefix}.HandRF.support.tsv ${Prefix}.support.tsv
+    mv ${Prefix}.HandRF.match.aln.fa ${Prefix}.match.aln.fa
 
     hmmbuild \
         --hand \
@@ -289,6 +291,12 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.hmm
                 cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa \
                     ./Round_00/05_CurrentConsensi.${LowerCase}.Round00.Extended.Consensus.fa
+
+                ##Merged model: one column per consensus position, extended by stitching each round
+                cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.match.aln.fa \
+                    ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
+                cp ./Round_00/08_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa \
+                    ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa
             else
                 ##Copy HMM model from left
                 cp ${LeftDir}/Family_${Family}/Round_00/05_CurrentConsensi.Left*Extended.hmm \
@@ -584,53 +592,6 @@ while [ ${Family} -lt ${NumFamilies} ];do
             fi
 
             if [[ ${RoundFailed} == "False" ]];then
-            #Reconcile previous alignments
-            ##Make alignment with previous round
-            mafft \
-                --localpair \
-                --maxiterate 1000 \
-                --thread ${CPU} \
-                --lexp -1.5 \
-                --lop 0.5 \
-                --add ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa \
-				./Round_${PrevRound}/05_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.aln.fa | \
-            sed "s/${LowerCase}R${PrevRound}/&DUP/" | \
-            sed "s/Central/&DUP/" \
-            > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp1.aln.fa
-
-            #Clean alignment with vertical script
-            python3 ../Staging/${VerticalScript} \
-                --input ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp1.aln.fa \
-                --output ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2 \
-                --perc  ${percentVertical}
-
-            #Merge alignment with previous rounds
-            #mafft \
-            #    --seed ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2.aln.fa \
-            #    --seed ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa \
-			#	/dev/null | \
-            #seqkit grep -v -r -p "DUP" \
-            #> ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
-
-            #Merge alignment with previous rounds
-            mafft-profile -g -0.1 -h 0.12 \
-                ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.tmp2.aln.fa \
-                ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa | \
-            seqkit grep -v -r -p "DUP" \
-            > ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa
-
-            #Remove gappy columns
-            python3 ../Staging/${CurateScript} \
-                --input ./Round_${CurrRound}/06_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln.fa \
-                --output ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
-                --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} \
-                --zeroOnly \
-                --Plots
-
-            #Remove peak suffix
-            mv ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus__Peak0.fa ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.Consensus.fa
-            mv ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated__Peak0.aln.fa ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated.aln.fa                
-
             ##Make mafft alignment of the previous consensus
             mafft \
                 --localpair \
@@ -647,12 +608,20 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --BasesOverl 20
 
             #Get extended size: new consensus bases beyond the previous model, after trimming the unsupported edge
-            ExtendedSize=$( cat ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord | \
-                            awk '{print $2-$1}' )
+            ExtendedSize=$( awk '{print $2-$1}' ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord )
 
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
                 echo -e "\nOnly ${ExtendedSize} supported bases added (minimum ${Increase})"
                 RoundFailed=True
+            else
+                #Add this round to the merged model by placing its match columns at the known offset
+                python3 ${StitchScript} \
+                    --merged ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa \
+                    --round ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.match.aln.fa \
+                    --extension ${ExtendedSize} \
+                    --side ${LowerCase} \
+                    --output ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
+                    --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} || RoundFailed=True
             fi
             fi
 

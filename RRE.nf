@@ -80,6 +80,8 @@ params.supportWindow               = 10    //Window, in match columns, used to j
 params.minBits                     = 30    //Min. nhmmer bit score of hits used for extension
 params.maxRetries                  = 3     //Failed rounds retried (with relaxed search) before a side stops
 params.minCopies                   = 10    //Min. copies supporting each column of a new edge
+params.maxIdentity                 = "auto" //Identity above which copies (segmental duplications) are collapsed into one representative;
+                                            //auto: halfway between the median pairwise identity of the copies and 1
 
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3

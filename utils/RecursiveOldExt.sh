@@ -7,8 +7,9 @@ supportWindow=10
 minBits=30
 rfMinOcc=0.5
 minCopies=10
+maxIdentity=auto
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -35,6 +36,7 @@ do
       B ) minBits="$OPTARG" ;;
       Q ) rfMinOcc="$OPTARG" ;;
       N ) minCopies="$OPTARG" ;;
+      D ) maxIdentity="$OPTARG" ;;
    esac
 done
 
@@ -542,6 +544,12 @@ while [ ${Family} -lt ${NumFamilies} ];do
             ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa > ./Round_${CurrRound}/Temp.fa
         
             cp ./Round_${CurrRound}/Temp.fa ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa
+
+            #One representative per group of near-identical copies (segmental duplications)
+            bash $(dirname $(realpath ${VerticalScript}))/CollapseNearIdentical.sh \
+                ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa \
+                ${CPU} \
+                ${maxIdentity}
 
             #Check if there is enough sequences to continue
             if [ $( grep -c ">" ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa ) -lt 5 ];then

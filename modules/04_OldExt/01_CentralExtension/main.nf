@@ -178,6 +178,12 @@ process RRE_CentralExtension{
             #Get fasta sequences
             bedtools getfasta -fi ./Staging/${Genome} -fo ./Family_\${FamilyNum}/Round_\${RoundCentral}/03_CurrentConsensi.Round\${RoundCentral}.Extended.fa -bed ./Family_\${FamilyNum}/Round_\${RoundCentral}/02_CurrentConsensi.Round\${RoundCentral}.Extended.bed -s
 
+            #Collapse near-identical copies (segmental duplications) into one representative each
+            bash \$(dirname \$(realpath ./Staging/${CurateScript}))/CollapseNearIdentical.sh \\
+                ./Family_\${FamilyNum}/Round_\${RoundCentral}/03_CurrentConsensi.Round\${RoundCentral}.Extended.fa \\
+                ${task.cpus} \\
+                ${params.maxIdentity}
+
             #Set sequence filter
             ##At least 20 percent of the sequences used
             SequenceFilter=\$(wc -l < ./Family_\${FamilyNum}/Round_\${RoundCentral}/02_CurrentConsensi.Round\${RoundCentral}.Extended.bed | awk '{\$0=\$0*0.2;printf("%d\\n",\$0+=\$0<0?0:0.9)}')

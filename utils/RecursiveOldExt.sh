@@ -244,6 +244,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
 							> ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.aln.fa
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Consensus.fa \
                             ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Consensus.fa
+                        #Column calls of the merged model (StitchMerge.py), absent if the left side never extended
+                        for File in ${LeftDir}/Family_${Family}/${HighestRound}/07_CurrentConsensi.Left*Extended.Curated.Columns.txt;do
+                            [ -f ${File} ] && cp ${File} ./Round_00/07_CurrentConsensi.${LowerCase}.Round00.Extended.Curated.Columns.txt
+                        done
                         cp ${LeftDir}/Family_${Family}/${HighestRound}/02_CurrentConsensi.Left*Extended.bed \
                             ./Round_00/02_CurrentConsensi.${LowerCase}.Round00.Extended.bed                            
                         cp ${CentralDir}/Family_${Family}/Final/Final.Consensus.RightSide.Coord \
@@ -634,7 +638,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 echo -e "\nOnly ${ExtendedSize} supported bases added (minimum ${Increase})"
                 RoundFailed=True
             else
-                #Add this round to the merged model by placing its match columns at the known offset
+                #Add this round to the merged model along the alignment of its consensus to the merged consensus
                 python3 ${StitchScript} \
                     --merged ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa \
                     --round ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.match.aln.fa \
@@ -676,8 +680,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
                             05_CurrentConsensi.${LowerCase}.RoundXX.Extended.hmm \
                             05_CurrentConsensi.${LowerCase}.RoundXX.Extended.Consensus.fa \
                             07_CurrentConsensi.${LowerCase}.RoundXX.Extended.Curated.aln.fa \
-                            07_CurrentConsensi.${LowerCase}.RoundXX.Extended.Curated.Consensus.fa;do
-                    cp ./Round_${PrevRound}/${File/XX/${PrevRound}} ./Round_${CurrRound}/${File/XX/${CurrRound}}
+                            07_CurrentConsensi.${LowerCase}.RoundXX.Extended.Curated.Consensus.fa \
+                            07_CurrentConsensi.${LowerCase}.RoundXX.Extended.Curated.Columns.txt;do
+                    [ -f ./Round_${PrevRound}/${File/XX/${PrevRound}} ] && \
+                        cp ./Round_${PrevRound}/${File/XX/${PrevRound}} ./Round_${CurrRound}/${File/XX/${CurrRound}}
                 done
 
                 RetrySettings ${NextLevel}

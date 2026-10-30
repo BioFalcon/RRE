@@ -83,6 +83,8 @@ params.minCopies                   = 10    //Min. copies supporting each column 
 params.maxIdentity                 = "auto" //Identity above which copies (segmental duplications) are collapsed into one representative;
                                             //auto: halfway between the median pairwise identity of the copies and 1
 params.refineIterations            = 8      //Max. iterations of the final genome-wide refinement of the model (0: no refinement)
+params.seedModel                   = false  //The seed alignment is already a full model (e.g. a refined model from another genome):
+                                            //align this genome's copies to it instead of rebuilding the central model with MAFFT
 
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3

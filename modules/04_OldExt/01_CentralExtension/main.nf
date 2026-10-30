@@ -129,6 +129,44 @@ process RRE_CentralExtension{
             fi
         fi
 
+        #The seed is already a full model (e.g. a refined model used in another genome): do not rebuild it from a
+        #MAFFT alignment of copies plus flanks, which for long, old repeats keeps only a short well-aligned core.
+        #Align this genome's copies to the seed model instead, and let the sides extend from it
+        if [ "${params.seedModel}" == "true" ] && [ \${SkipRounds} == "No" ];then
+            Round=./Family_\${FamilyNum}/Round_01
+            mkdir -p \${Round}
+            UtilsDir=\$(dirname \$(realpath ./Staging/${CurateScript}))
+
+            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --maxinsertlen 10 -n \${Repeat} \\
+                \${Round}/06_Seed.hmm ${file(params.alnFile)} > /dev/null
+
+            #This genome's copies of the seed, best scoring first
+            head -n 2000 ./Family_\${FamilyNum}/Round_00/02_CurrentConsensi.Round00.Extended.bed \\
+                > \${Round}/02_CurrentConsensi.Round01.Extended.bed
+            bedtools getfasta -s -fi ./Staging/${Genome} -bed \${Round}/02_CurrentConsensi.Round01.Extended.bed \\
+                -fo \${Round}/03_CurrentConsensi.Round01.Extended.fa
+            bash \${UtilsDir}/CollapseNearIdentical.sh \${Round}/03_CurrentConsensi.Round01.Extended.fa ${task.cpus} ${params.maxIdentity}
+
+            hmmalign --dna --trim --outformat afa \${Round}/06_Seed.hmm \${Round}/03_CurrentConsensi.Round01.Extended.fa | \\
+                awk '/^>/{print; next}{gsub(/\\./,"-"); print toupper(\$0)}' \\
+                > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa
+
+            python3 \${UtilsDir}/HandRF.py \\
+                --input \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa \\
+                --output \${Round}/07_CurrentConsensi.Round01.Extended.Curated \\
+                --minOcc ${params.rfMinOcc} \\
+                --name \${Repeat}
+            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --fragthresh 1.0 --wnone --maxinsertlen 10 -n \${Repeat} \\
+                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \\
+                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.stk > /dev/null
+            hmmemit -c \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \\
+                > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.Consensus.fa
+
+            echo "Seed used as the central model: \$(grep -c '>' \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa) copies aligned to it"
+            > \${Round}/GoodCHECK
+            SkipRounds=Yes
+        fi
+
         while [[ \${RoundCentral} -le ${params.maxCentralRounds} ]] && [ \${SkipRounds} == "No" ]; do
             #Make dir for this round
             mkdir -p ./Family_\${FamilyNum}/Round_\${RoundCentral}

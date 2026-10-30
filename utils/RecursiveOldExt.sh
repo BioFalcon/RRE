@@ -40,9 +40,10 @@ do
    esac
 done
 
-#HandRF.py lives next to the other utils
-HandRFScript=$(dirname $(realpath ${VerticalScript}))/HandRF.py
-StitchScript=$(dirname $(realpath ${VerticalScript}))/StitchMerge.py
+#The AncientMode helpers live next to the other utils (resolved here, before changing directory)
+UtilsDir=$(dirname $(realpath ${VerticalScript}))
+HandRFScript=${UtilsDir}/HandRF.py
+StitchScript=${UtilsDir}/StitchMerge.py
 if [ ! -f ${HandRFScript} ] || [ ! -f ${StitchScript} ];then
     echo "HandRF.py or StitchMerge.py not found next to ${VerticalScript}, exiting"
     exit 1
@@ -546,7 +547,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
             cp ./Round_${CurrRound}/Temp.fa ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa
 
             #One representative per group of near-identical copies (segmental duplications)
-            bash $(dirname $(realpath ${VerticalScript}))/CollapseNearIdentical.sh \
+            bash ${UtilsDir}/CollapseNearIdentical.sh \
                 ./Round_${CurrRound}/03_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.fa \
                 ${CPU} \
                 ${maxIdentity}
@@ -620,10 +621,14 @@ while [ ${Family} -lt ${NumFamilies} ];do
 
             #Get extended size: new consensus bases beyond the previous model, after trimming the unsupported edge
             #(bases of the previous model before the anchor were already in the model: not counted, not stitched twice)
-            ExtendedSize=$( python3 $(dirname $(realpath ${VerticalScript}))/ExtensionSize.py \
+            ExtendedSize=$( python3 ${UtilsDir}/ExtensionSize.py \
                 --input ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln \
                 --side ${LowerCase} \
                 --minRun 20 )
+            if ! [[ ${ExtendedSize} =~ ^[0-9]+$ ]];then
+                echo -e "\nCould not measure the extension of ${LowerCase} round ${CurrRound}, exiting"
+                exit 1
+            fi
 
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
                 echo -e "\nOnly ${ExtendedSize} supported bases added (minimum ${Increase})"

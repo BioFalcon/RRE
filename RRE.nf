@@ -79,6 +79,7 @@ params.minConservation             = 0.45  //Min. mean frequency of the most com
 params.supportWindow               = 10    //Window, in match columns, used to judge the new edge
 params.minBits                     = 30    //Min. nhmmer bit score of hits used for extension
 params.maxRetries                  = 3     //Failed rounds retried (with relaxed search) before a side stops
+params.minCopies                   = 10    //Min. copies supporting each column of a new edge
 
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3

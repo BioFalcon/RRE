@@ -6,8 +6,9 @@ minConservation=0.45
 supportWindow=10
 minBits=30
 rfMinOcc=0.5
+minCopies=10
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -33,6 +34,7 @@ do
       W ) supportWindow="$OPTARG" ;;
       B ) minBits="$OPTARG" ;;
       Q ) rfMinOcc="$OPTARG" ;;
+      N ) minCopies="$OPTARG" ;;
    esac
 done
 
@@ -81,6 +83,7 @@ function BuildHandHMM() {
         --trimSide ${TrimSide} \
         --minCons ${minConservation} \
         --window ${supportWindow} \
+        --minSeqs ${minCopies} \
         --name ${HMMName} > ${Prefix}.HandRF.log || return 1
 
     #Not enough match columns left to build a model
@@ -622,6 +625,16 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     --side ${LowerCase} \
                     --output ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
                     --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} || RoundFailed=True
+
+                #After a small extension, still search at least ExtensionSize in from the edge,
+                #so the next round is not left with only a handful of copies
+                if [[ ${ExtendedSize} -lt ${ExtensionSize} ]];then
+                    SetOuterCoord \
+                        ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Consensus.fa \
+                        ${LowerCase} \
+                        ${ExtensionSize} \
+                        ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
+                fi
             fi
             fi
 

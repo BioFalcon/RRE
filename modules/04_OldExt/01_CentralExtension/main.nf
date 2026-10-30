@@ -299,19 +299,11 @@ process RRE_CentralExtension{
                 RightSide_Size=\$(tail -n 1 ./Family_\${FamilyNum}/Final/FinalConsensi.SidesCheck.Coords | awk '{print \$2 - \$1}')
 
                 ##CheckSides
-                ###Left
-                if [ \${LeftSide_Size} -lt \${Increase} ]; then
-                    FailedLeft=Yes
-                else
-                    head -n 1 ./Family_\${FamilyNum}/Final/FinalConsensi.SidesCheck.Coords > ./Family_\${FamilyNum}/Final/Final.Consensus.LeftSide.Coord
-                fi
-
-                ###Right
-                if [ \${RightSide_Size} -lt \${Increase} ]; then
-                    FailedRight=Yes
-                else
-                    tail -n 1 ./Family_\${FamilyNum}/Final/FinalConsensi.SidesCheck.Coords > ./Family_\${FamilyNum}/Final/Final.Consensus.RightSide.Coord
-                fi
+                ###A short central extension is not a reason to give up a side: the recursive
+                ###extension searches from the edge of the model and retries with larger settings
+                echo "Central extension: Left \${LeftSide_Size} bp, Right \${RightSide_Size} bp"
+                head -n 1 ./Family_\${FamilyNum}/Final/FinalConsensi.SidesCheck.Coords > ./Family_\${FamilyNum}/Final/Final.Consensus.LeftSide.Coord
+                tail -n 1 ./Family_\${FamilyNum}/Final/FinalConsensi.SidesCheck.Coords > ./Family_\${FamilyNum}/Final/Final.Consensus.RightSide.Coord
 
             fi
 

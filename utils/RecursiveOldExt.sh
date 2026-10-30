@@ -619,7 +619,11 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 --BasesOverl 20
 
             #Get extended size: new consensus bases beyond the previous model, after trimming the unsupported edge
-            ExtendedSize=$( awk '{print $2-$1}' ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord )
+            #(bases of the previous model before the anchor were already in the model: not counted, not stitched twice)
+            ExtendedSize=$( python3 $(dirname $(realpath ${VerticalScript}))/ExtensionSize.py \
+                --input ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.aln \
+                --side ${LowerCase} \
+                --minRun 20 )
 
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
                 echo -e "\nOnly ${ExtendedSize} supported bases added (minimum ${Increase})"
@@ -634,15 +638,13 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     --output ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
                     --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} || RoundFailed=True
 
-                #After a small extension, still search at least ExtensionSize in from the edge,
-                #so the next round is not left with only a handful of copies
-                if [[ ${ExtendedSize} -lt ${ExtensionSize} ]];then
-                    SetOuterCoord \
-                        ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Consensus.fa \
-                        ${LowerCase} \
-                        ${ExtensionSize} \
-                        ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
-                fi
+                #Next search window: the new bases, and at least ExtensionSize in from the edge,
+                #so the next round is not left with only a handful of copies after a small extension
+                SetOuterCoord \
+                    ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Consensus.fa \
+                    ${LowerCase} \
+                    $(( ExtendedSize > ExtensionSize ? ExtendedSize : ExtensionSize )) \
+                    ./Round_${CurrRound}/08_CurrentConsensi.${LowerCase}.Round${CurrRound}.ExtendedSide.Coord
             fi
             fi
 

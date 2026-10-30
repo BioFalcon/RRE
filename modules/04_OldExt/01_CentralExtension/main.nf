@@ -137,7 +137,7 @@ process RRE_CentralExtension{
             mkdir -p \${Round}
             UtilsDir=\$(dirname \$(realpath ./Staging/${CurateScript}))
 
-            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --maxinsertlen 10 -n \${Repeat} \\
+            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --maxinsertlen 10 --eentexp -n \${Repeat} \\
                 \${Round}/06_Seed.hmm ${file(params.alnFile)} > /dev/null
 
             #This genome's copies of the seed, best scoring first
@@ -156,7 +156,7 @@ process RRE_CentralExtension{
                 --output \${Round}/07_CurrentConsensi.Round01.Extended.Curated \\
                 --minOcc ${params.rfMinOcc} \\
                 --name \${Repeat}
-            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --fragthresh 1.0 --wnone --maxinsertlen 10 -n \${Repeat} \\
+            hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --fragthresh 1.0 --maxinsertlen 10 --eentexp -n \${Repeat} \\
                 \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \\
                 \${Round}/07_CurrentConsensi.Round01.Extended.Curated.stk > /dev/null
             hmmemit -c \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \\
@@ -261,7 +261,8 @@ process RRE_CentralExtension{
                 --seed 1992 \\
                 --cpu ${task.cpus} \\
                 --fragthresh 1.0 \\
-                --wnone \\
+                --maxinsertlen 10 \\
+                --eentexp \\
                 -n \${Repeat} \\
                 ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.hmm \\
                 ./Family_\${FamilyNum}/Round_\${RoundCentral}/07_CurrentConsensi.Round\${RoundCentral}.Extended.Curated.stk

@@ -5,8 +5,10 @@
 #The exact consensus never settles for an old repeat (near-tied columns flip as the sample of copies shifts).
 #Iterating can also slowly recruit a related family, so refinement stops if the consensus drifts too far from
 #that of the first iteration, keeping the last model within the limit.
-#Models are built with --maxinsertlen 10 (as Dfam): without it, hits bridge long insertions (often younger TEs
-#nested in the copies) and those count as copies of the repeat.
+#Models are built as Dfam builds them: --maxinsertlen 10 (without it, hits bridge long insertions, often younger
+#TEs nested in the copies, and those count as copies of the repeat) and exponential entropy weighting (--eentexp,
+#to the default target of 0.62 bits/position), which down-weights densely covered columns more than sparse ones,
+#so regions with few copies (e.g. eroded ends) are not flattened to the prior.
 #Model ends supported by only a few copies (e.g. flank picked up during the extension) are trimmed by coverage.
 #Blocks of a younger, more abundant family the extension ran into (many hits, much more similar to each other
 #than the copies of the rest of the model) are cut off at the depth valley between them and the rest (ForeignBlocks.py).
@@ -125,7 +127,7 @@ else
     python3 ${UtilsDir}/HandRF.py --input ${Aln} --output ${Work}/Iter00 --minOcc ${MinOcc} --name ${Name} > ${Work}/Iter00.HandRF.log || exit 1
     echo "Iteration 00: match columns from HandRF.py"
 fi
-hmmbuild --hand --dna --cpu ${CPU} --seed 1992 --fragthresh 1.0 --wnone --maxinsertlen 10 -n ${Name} \
+hmmbuild --hand --dna --cpu ${CPU} --seed 1992 --fragthresh 1.0 --maxinsertlen 10 --eentexp -n ${Name} \
     ${Work}/Iter00.hmm ${Work}/Iter00.stk > /dev/null || { echo "hmmbuild failed on the starting alignment"; exit 1; }
 hmmemit -c ${Work}/Iter00.hmm > ${Work}/Iter00.Consensus.fa
 echo -e "iteration\thits\tused\tcopies\tmatch_columns\tcoverage_trimmed\tconsensus_length\thit_gain\tconsensus_change\tdrift_from_iter1" > ${Out}.iterations.tsv
@@ -201,7 +203,7 @@ EOF
     Match=$(awk '$1=="MATCH_COLUMNS"{print $2}' ${Work}/Iter${It}.HandRF.log)
     CovTrim=$(awk '$1=="COVERAGE_TRIMMED_MATCH_COLUMNS"{print $2}' ${Work}/Iter${It}.HandRF.log)
 
-    hmmbuild --hand --dna --cpu ${CPU} --seed 1992 --fragthresh 1.0 --wnone --maxinsertlen 10 -n ${Name} \
+    hmmbuild --hand --dna --cpu ${CPU} --seed 1992 --fragthresh 1.0 --maxinsertlen 10 --eentexp -n ${Name} \
         ${Work}/Iter${It}.hmm ${Work}/Iter${It}.stk > /dev/null || { echo "hmmbuild failed"; exit 1; }
     hmmemit -c ${Work}/Iter${It}.hmm > ${Work}/Iter${It}.Consensus.fa
 

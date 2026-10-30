@@ -108,7 +108,8 @@ function BuildHandHMM() {
         --informat stockholm \
         --seed 1992 \
         --fragthresh 1.0 \
-        --wnone \
+        --maxinsertlen 10 \
+        --eentexp \
         -n ${HMMName} \
         ${Prefix}.hmm \
         ${Prefix}.stk > /dev/null || return 1

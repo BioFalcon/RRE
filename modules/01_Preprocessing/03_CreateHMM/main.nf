@@ -10,11 +10,11 @@ process CreateNSplitHMM {
 
     script:
     """
-    #Build HMM models
+    #Build HMM models (AncientMode: from the match columns of the prepared seed, as every AncientMode model)
     hmmbuild \\
         --dna \\
         --cpu ${task.cpus} \\
-        --symfrac 0.3 \\
+        ${params.AncientMode ? "--hand" : "--symfrac 0.3"} \\
         --seed 1992 \\
         --fragthresh 1.0 \\
         --wnone \\

@@ -94,7 +94,7 @@ params.hmmResults                  = ""
 params.AncientMode                   = ""
 
 //AncientMode: model building and extension judgement
-params.rfMinOcc                    = 0.5   //Min. fraction of spanning sequences with a residue for a match (RF) column
+params.rfMinOcc                    = 0.5   //Min. fraction of spanning sequences with a residue for a match (RF) column (extension rounds, and the seed with --rfFromOccupancy)
 params.minConservation             = 0.45  //Min. mean frequency of the most common base at the new edge of an extension
 params.supportWindow               = 10    //Window, in match columns, used to judge the new edge
 params.minBits                     = 30    //Min. nhmmer bit score of hits used for extension
@@ -111,6 +111,9 @@ params.anchorSpan                = 300    //continue colinearly into the new bas
 params.anchorMinRatio            = 0.2    //anchor bases next to them, at least anchorMinRatio and anchorMinCopies; the
 params.anchorMinCopies           = 5      //(at most half the anchored copies, at least 2, in low-copy genomes); the side stops at the second unsupported round in a row (anchorMinRatio 0: no check),
 params.anchorMaxJump             = 3      //or when the anchored copies jump above anchorMaxJump x the lower of the last two rounds
+params.rfAll                       = false  //AncientMode seed: every alignment column with a residue is a match column
+params.rfFromOccupancy             = false  //AncientMode seed: match columns are those where >= rfMinOcc of the sequences spanning them have a base
+                                            //Without either, every seed family must have a #=GC RF line
 params.centralRound                = false  //AncientMode: rebuild the starting model from a MAFFT alignment of the seed's copies plus
                                             //flanks before extending. By default the seed itself (its #=GC RF columns) is the starting model
 
@@ -137,7 +140,7 @@ if ( params.help || params.h ){
 //Check if required files/arguments to run are present
 if ( !params.Genome){
     exit 1, helpMessage() + "--Genome not specified !!!"
-} else if (!params.consensus){
+} else if (!params.consensus && !params.AncientMode){
     exit 1, helpMessage() + "--consensus not specified !!!"
 } else if (!params.alnFile){
     exit 1, helpMessage() + "--alnFile not specified !!!"
@@ -145,6 +148,15 @@ if ( !params.Genome){
     exit 1, helpMessage() + "--workflow not specified !!!"
 } else if ( params.workflow != "RRE" && params.workflow != "HEEA" ){
     exit 1, helpMessage() + "--workflow must be either 'RRE' or 'HEEA' !!!"
+} else if ( params.rfAll && params.rfFromOccupancy ){
+    exit 1, helpMessage() + "--rfAll and --rfFromOccupancy are alternatives, use only one !!!"
+} else if ( (params.rfAll || params.rfFromOccupancy) && !params.AncientMode ){
+    exit 1, helpMessage() + "--rfAll and --rfFromOccupancy are only used with --AncientMode !!!"
+}
+
+//AncientMode takes the consensus of each family from the seed alignment
+if ( params.AncientMode && params.consensus ){
+    log.warn "--consensus is not used with --AncientMode: the consensus is derived from the match columns of the seed alignment"
 }
 
 /************************************************
@@ -168,10 +180,11 @@ if (params.hmmResults){
 //Obtain the absolute paths for all the required files
 outDir             = file(params.outDir)
 Genome             = file(params.Genome)
-consensus          = file(params.consensus)
+consensus          = params.AncientMode ? null : file(params.consensus)
 consensusAln       = file(params.alnFile)
 
 CurateScript       = file("./utils/MSACuration.py")
+SeedScript         = file("./utils/SeedPrep.py")
 CoverageScript     = file("./utils/CoverageSelection.py")
 RREScript          = file("./utils/RecursiveExtension.sh")
 RREOLDScript       = file("./utils/RecursiveOldExt.sh")
@@ -198,7 +211,7 @@ log.info"""
 log.info "Running the pipeline with the following parameters: "
 log.info "============================================================="
 log.info "Genome path                : ${params.Genome}"
-log.info "Consensus path             : ${params.consensus}"
+log.info "Consensus path             : ${params.AncientMode ? "derived from the seed alignment" : params.consensus}"
 log.info "Alignment file             : ${params.alnFile}"
 log.info "Output path                : ${params.outDir}"
 log.info "Extension size             : ${params.extension}"
@@ -220,6 +233,7 @@ log.info "============================================================="
 ************************************************/
 
 //Preprocessing
+include {SeedPrep       } from './modules/01_Preprocessing/00_SeedPrep'
 include {WorkDirPrep    } from './modules/01_Preprocessing/01_WorkDirPrep'
 include {HMMDBBuild     } from './modules/01_Preprocessing/02_HMMDBBuild'
 include {CreateNSplitHMM} from './modules/01_Preprocessing/03_CreateHMM'
@@ -302,11 +316,26 @@ workflow RRE{
         RREOLDScript
         VerticalScript
         CoverageScript
+        SeedAln
 
     main:
     //////////////////////////////////////////////
     //Central Extension
     //////////////////////////////////////////////
+    if ( params.AncientMode ){
+    RRE_CentralExtension( ConsensusSelection,
+                          HMMRDB,
+                          ConsensusFasta,
+                          FAIndex,
+                          HMMROut,
+                          outDir,
+                          Genome,
+                          CurateScript,
+                          OutlierScript,
+                          CoordExtractScript,
+                          SeedAln
+                        )
+    } else {
     RRE_CentralExtension( ConsensusSelection,
                           HMMRDB,
                           ConsensusFasta,
@@ -318,6 +347,7 @@ workflow RRE{
                           OutlierScript,
                           CoordExtractScript
                         )
+    }
 
     //////////////////////////////////////////////
     //Recursive Extension
@@ -370,8 +400,8 @@ workflow{
 
     //Make Channels 
     Genome             = Channel.fromPath(Genome)
-    consensus          = Channel.fromPath(consensus)
     consensusAln       = Channel.fromPath(consensusAln)
+    SeedScript         = Channel.fromPath(SeedScript)
     CurateScript       = Channel.fromPath(CurateScript)
     CoverageScript     = Channel.fromPath(CoverageScript)
     OutlierScript      = Channel.fromPath(OutlierScript)
@@ -391,8 +421,18 @@ workflow{
     ////Create HMM database
     HMMDBBuild(Genome)
 
+    ////AncientMode: match columns and consensus of each family from the seed alignment
+    if ( params.AncientMode ){
+        SeedPrep(consensusAln, SeedScript)
+        SeedAln   = SeedPrep.out.Stk
+        consensus = SeedPrep.out.Fasta
+    } else {
+        SeedAln   = consensusAln
+        consensus = Channel.fromPath(consensus)
+    }
+
     ////Create HMM models and split them
-    CreateNSplitHMM(consensusAln)
+    CreateNSplitHMM(SeedAln)
 
     if ( params.hmmResults ){
         HMMER_Results = Channel.fromPath(hmmResults)
@@ -425,7 +465,8 @@ workflow{
                            RREScript.collect(),
                            RREOLDScript.collect(),
                            VerticalScript.collect(),
-                           CoverageScript.collect() )
+                           CoverageScript.collect(),
+                           SeedAln.collect() )
 
     } else if ( params.workflow == "HEEA" ){
         HEEA( HMMSelection.out.splitText(by:1, file:true),

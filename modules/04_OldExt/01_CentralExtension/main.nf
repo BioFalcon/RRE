@@ -12,6 +12,7 @@ process RRE_CentralExtension{
     file(CurateScript)
     file(OutlierScript)
     file(ExtractCoordScript)
+    file(SeedAln)
 
     output:
     tuple env(Repeat),file("Central.FINISH.CHECK"), emit:AllSides
@@ -136,14 +137,19 @@ process RRE_CentralExtension{
             Round=./Family_\${FamilyNum}/Round_01
             mkdir -p \${Round}
 
+            #This family's block of the prepared seed alignment (SeedPrep: match columns set, one block per family)
+            awk -v ID="\${Repeat}" '{Block=Block \$0 "\\n"} /^\\/\\//{if (index(Block, "\\n#=GF ID " ID "\\n")) printf "%s", Block; Block=""}' \\
+                \${oldWorkDir}/${SeedAln} > \${Round}/Seed.stk
+            [ -s \${Round}/Seed.stk ] || { echo "ERROR: \${Repeat} not found in the prepared seed alignment"; exit 1; }
+
             hmmbuild --hand --dna --informat stockholm --seed 1992 --cpu ${task.cpus} --fragthresh 1.0 --maxinsertlen 10 --eentexp -n \${Repeat} \\
-                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm ${file(params.alnFile)} > /dev/null
+                \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm \${Round}/Seed.stk > /dev/null
             hmmemit -c \${Round}/07_CurrentConsensi.Round01.Extended.Curated.hmm | \\
                 awk '/^>/{print; next}{print toupper(\$0)}' \\
                 > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.Consensus.fa
 
             #The seed's match columns only, one column per model position
-            python3 - ${file(params.alnFile)} > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa <<'EOF'
+            python3 - \${Round}/Seed.stk > \${Round}/07_CurrentConsensi.Round01.Extended.Curated.aln.fa <<'EOF'
 import sys
 Seqs, RF, Order = {}, "", []
 for line in open(sys.argv[1]):

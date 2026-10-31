@@ -15,7 +15,7 @@ def helpMessage() {
 
   Parameters:
   --Genome               Genome to be analyzed in fasta format.
-  --consensus            Consensus sequences in fasta format.
+  --consensus            Consensus sequences in fasta format (not used with --AncientMode).
   --outDir               Output directory (default:./Results).
   --extension            Number of bases to extend the consensus (default:250)
   --workflow             Workflow to use for the extension [HEEA|RRE]
@@ -26,8 +26,9 @@ def helpMessage() {
   --maxRounds           Maximum number of rounds for the recursive extension (default:30)
 
   AncientMode (--AncientMode; see README.md and CHANGELOG.md):
-  --centralRound          Rebuild the starting model from a MAFFT alignment of the seed copies
-                          (default: the seed #=GC RF columns are the starting model)
+  --rfAll                 Seed without #=GC RF: every column with a residue is a match column
+  --rfFromOccupancy       Seed without #=GC RF: match columns by occupancy (>= rfMinOcc)
+                          (without either, every seed family needs a #=GC RF line)
   --rfMinOcc              Min. fraction of spanning sequences for a match column (default:0.5)
   --minConservation       Min. conservation of the new edge of an extension (default:0.45)
   --supportWindow         Window, in match columns, to judge the new edge (default:10)
@@ -114,8 +115,6 @@ params.anchorMaxJump             = 3      //or when the anchored copies jump abo
 params.rfAll                       = false  //AncientMode seed: every alignment column with a residue is a match column
 params.rfFromOccupancy             = false  //AncientMode seed: match columns are those where >= rfMinOcc of the sequences spanning them have a base
                                             //Without either, every seed family must have a #=GC RF line
-params.centralRound                = false  //AncientMode: rebuild the starting model from a MAFFT alignment of the seed's copies plus
-                                            //flanks before extending. By default the seed itself (its #=GC RF columns) is the starting model
 
 //Parameter for Horizontal cleaning
 params.percentVertical             = 0.3
@@ -322,17 +321,11 @@ workflow RRE{
     //////////////////////////////////////////////
     //Central Extension
     //////////////////////////////////////////////
+    //AncientMode has no central extension: the seed's model is handed to both sides
     if ( params.AncientMode ){
     RRE_CentralExtension( ConsensusSelection,
-                          HMMRDB,
-                          ConsensusFasta,
-                          FAIndex,
                           HMMROut,
                           outDir,
-                          Genome,
-                          CurateScript,
-                          OutlierScript,
-                          CoordExtractScript,
                           SeedAln
                         )
     } else {

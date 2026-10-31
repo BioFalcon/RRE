@@ -10,7 +10,7 @@ Recursive Repeat Extender (RRE) is a Nextflow DSL2 pipeline for extending and po
 ## Inputs
 Required flags:
 - `--Genome` — genome FASTA
-- `--consensus` — consensus sequences FASTA (e.g. RepeatModeler2 output). Note that RRE expects sequence names to list the family classification after a `#` character (e.g. `>rnd-1_family-101#LTR`. By default, RRE avoids extending solo LTRs).
+- `--consensus` — consensus sequences FASTA (e.g. RepeatModeler2 output). Note that RRE expects sequence names to list the family classification after a `#` character (e.g. `>rnd-1_family-101#LTR`. By default, RRE avoids extending solo LTRs). Not used with `--AncientMode`, which takes each family's consensus from its seed alignment.
 - `--alnFile` — seed alignments in Stockholm (`.stk`) alignment format. Note that sequence names must match the entries in the `--consensus` file.
 - `--workflow` — either `RRE` or `HEEA`
 
@@ -24,7 +24,7 @@ Key parameters (current defaults from `RRE.nf`):
 - `--extension` 250 (bases added each round)
 - `--maxExtensionSize` 25000
 - `--maxRounds` 30 (recursive rounds)
-- `--maxCentralRounds` 1 (central extension rounds)
+- `--maxCentralRounds` 1 (central extension rounds; AncientMode has none)
 - `--maxFamilies` 10 (per repeat family)
 - `--SampleSeqs` 25 (sequences sampled per round)
 - `--hmmEValue` 1e-5 (HMMER filtering)
@@ -40,8 +40,9 @@ AncientMode options (only used with `--AncientMode`; see `CHANGELOG.md` for how 
 
 | Option | Default | What it does |
 |---|---|---|
-| `--centralRound` | off | Rebuild the starting model from a MAFFT alignment of the seed's copies plus flanks. By default the seed's own `#=GC RF` match columns are the starting model. |
-| `--rfMinOcc` | 0.5 | Minimum fraction of spanning sequences with a residue for a column to become a match (RF) column. |
+| `--rfAll` | off | Seed without a `#=GC RF` line: every alignment column with a residue is a match column. Right for alignments without insert columns (e.g. cut to consensus columns); a gappy alignment gives a long model of near-empty positions. |
+| `--rfFromOccupancy` | off | Seed without a `#=GC RF` line: match columns are those where at least `--rfMinOcc` of the sequences spanning them have a base (as HMMER's `--symfrac`). Use for gappy alignments. Either option replaces the RF line of every family, also of families that have one. |
+| `--rfMinOcc` | 0.5 | Minimum fraction of spanning sequences with a residue for a column to become a match (RF) column, in the extension rounds and for the seed with `--rfFromOccupancy`. |
 | `--minConservation` | 0.45 | Minimum mean frequency of the most common base at the new edge of an extension; the unconserved edge is trimmed. |
 | `--supportWindow` | 10 | Window, in match columns, used to judge the new edge. |
 | `--minCopies` | 10 | Minimum copies supporting each column of a new edge. |
@@ -58,7 +59,7 @@ AncientMode options (only used with `--AncientMode`; see `CHANGELOG.md` for how 
 | `--anchorMaxJump` | 3 | The side stops when the anchored copies rise above this many times the lower count of the previous two rounds (the edge has run into a more abundant repeat). |
 | `--refineIterations` | 8 | Maximum iterations of the final genome-wide refinement of the model; 0 skips it. |
 
-With the default starting model, the seed Stockholm file must have a `#=GC RF` line marking match columns with uppercase `X`, as Dfam seeds do. To cut a Dfam seed down to a region of its consensus (for example its best conserved part):
+In AncientMode the seed Stockholm file (`--alnFile`) is the only input describing the families; `--consensus` is ignored. Each family needs a `#=GF ID` line, and a `#=GC RF` line marking its match columns (any non-gap character), as Dfam seeds have; without one, the run stops unless `--rfAll` or `--rfFromOccupancy` is given. The family's class is read from `#=GF TP` (`Unknown` if absent), and its consensus is the consensus of the model built from the match columns. Every AncientMode model, including the first genome search, is built from the match columns (`hmmbuild --hand`). To cut a Dfam seed down to a region of its consensus (for example its best conserved part):
 ```bash
 bash DfamTruncationScript.sh Family.stk 81 281 [min_freq]
 ```
@@ -101,7 +102,6 @@ nextflow run RRE.nf \
 ```bash
 nextflow run RRE.nf \
 	--Genome ./HumanGenome.fa \
-	--consensus ./examples/AncientExtension/MamCR1.Truncated.fa \
 	--alnFile ./examples/AncientExtension/MamCR1.Truncated.stk \
 	--workflow RRE \
 	--AncientMode \

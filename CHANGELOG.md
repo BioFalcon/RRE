@@ -8,19 +8,30 @@ are unchanged. New command line options are listed in the README under
 "AncientMode options".
 
 ### Starting model
-- **The seed is the starting model.** The HMM is built from the seed's own match
-  columns (`#=GC RF`, as Dfam does) and both sides extend from it, so every seed
-  position stays a consensus position of the final model. This works for a short
-  seed fragment and for a full model taken from another genome. The old central
-  round (rebuilding the model from a MAFFT alignment of the seed's copies plus
-  flanks) kept only a short core for long, old repeats; it is still available with
-  `--centralRound`.
+- **The seed alignment is the only input in AncientMode; `--consensus` is ignored.** A new
+  first step (`SeedPrep`, `utils/SeedPrep.py`) reads each family's ID (`#=GF ID`), class
+  (`#=GF TP`, `Unknown` if absent) and match columns, and derives the consensus from the model
+  built on those columns (`hmmbuild --hand`, `hmmemit -c`), so it always matches the starting
+  model position by position.
+- **Match columns must be defined.** Each family needs a `#=GC RF` line; without one the run
+  stops with an error unless `--rfAll` (every column with a residue) or `--rfFromOccupancy`
+  (columns where at least `--rfMinOcc` of the spanning sequences have a base) is given. Either
+  option replaces the RF line of every family.
+- **Every AncientMode model is built with `--hand`**, including the first genome search, which
+  used `--symfrac 0.3`. The starting model is built from the family's block of the prepared
+  seed, so a seed file with several families also works.
+- **The seed is the starting model; there is no central round.** The HMM is built from
+  the seed's own match columns (`#=GC RF`, as Dfam does) and both sides extend from it,
+  so every seed position stays a consensus position of the final model. This works for a
+  short seed fragment and for a full model taken from another genome. The central round
+  (rebuilding the model from a MAFFT alignment of the seed's copies plus flanks) kept only
+  a short core for long, old repeats and could give up a side; it is removed from
+  AncientMode. Both sides always extend, and a side that finds no supported extension
+  stops by itself.
 - **The seed Stockholm file needs a `#=GC RF` line** marking match columns with
   uppercase `X` (Dfam seeds have one). `DfamTruncationScript.sh <in.stk> <start> <end>`
   cuts a Dfam seed to a region of its consensus and writes a matching
   `.stk` and consensus `.fa`.
-- The central round, when used, no longer abandons a side after a short extension;
-  the recursive rounds retry it instead.
 
 ### Model building
 - **All models are built with `hmmbuild --hand`** from match columns set by column

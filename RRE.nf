@@ -24,6 +24,26 @@ def helpMessage() {
   --hyperT               Activate Hyperthreading (off by default)
   --alnFile         Alignment file of the consensus sequences in stockholm format.
   --maxRounds           Maximum number of rounds for the recursive extension (default:30)
+
+  AncientMode (--AncientMode; see README.md and CHANGELOG.md):
+  --centralRound          Rebuild the starting model from a MAFFT alignment of the seed copies
+                          (default: the seed #=GC RF columns are the starting model)
+  --rfMinOcc              Min. fraction of spanning sequences for a match column (default:0.5)
+  --minConservation       Min. conservation of the new edge of an extension (default:0.45)
+  --supportWindow         Window, in match columns, to judge the new edge (default:10)
+  --minCopies             Min. copies supporting each new edge column (default:10)
+  --minBits               Min. nhmmer bit score of hits used for extension (default:30)
+  --maxRetries            Failed rounds retried before a side stops (default:3)
+  --maxIdentity           Identity above which copies are collapsed [auto|0.80-0.98] (default:auto)
+  --curationIdentityExp   Column score: (1-entropy)^IdentityExp * (1-gaps)^GapExp (default:1.4)
+  --curationGapExp        (default:0.3)
+  --curationMaxThresh     Cap on the column-score threshold (default:0.1)
+  --anchorLength          Anchored stop rule: model bases searched with the new bases (default:500)
+  --anchorSpan            Anchor bases next to the new bases that copies must span (default:300)
+  --anchorMinRatio        Min. fraction of anchored copies continuing; 0 disables (default:0.2)
+  --anchorMinCopies       Min. continuing copies (fewer in low-copy genomes) (default:5)
+  --anchorMaxJump         Stop when anchored copies jump above this x previous (default:3)
+  --refineIterations      Max. iterations of the final genome-wide refinement; 0 skips (default:8)
   
 
 

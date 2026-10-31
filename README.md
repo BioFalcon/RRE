@@ -17,7 +17,7 @@ Required flags:
 Optional/advanced:
 - `--outDir` — output folder (default `./Results`)
 - `--hmmResults` — precomputed HMMER tblout to skip running nhmmer
-- `--AncientMode` — use extension strategy for older repeats
+- `--AncientMode` — use extension strategy for older repeats (options below)
 - `--hyperT` — enable hyperthreading flag passed to some tools
 
 Key parameters (current defaults from `RRE.nf`):
@@ -35,6 +35,34 @@ Key parameters (current defaults from `RRE.nf`):
 - `--polishLengthLimitMultiplier` 1.5
 - `--polishWindow` 10000
 - `--polishCoverage` 50
+
+AncientMode options (only used with `--AncientMode`; see `CHANGELOG.md` for how each step works):
+
+| Option | Default | What it does |
+|---|---|---|
+| `--centralRound` | off | Rebuild the starting model from a MAFFT alignment of the seed's copies plus flanks. By default the seed's own `#=GC RF` match columns are the starting model. |
+| `--rfMinOcc` | 0.5 | Minimum fraction of spanning sequences with a residue for a column to become a match (RF) column. |
+| `--minConservation` | 0.45 | Minimum mean frequency of the most common base at the new edge of an extension; the unconserved edge is trimmed. |
+| `--supportWindow` | 10 | Window, in match columns, used to judge the new edge. |
+| `--minCopies` | 10 | Minimum copies supporting each column of a new edge. |
+| `--minBits` | 30 | Minimum nhmmer bit score of the hits used for extension. |
+| `--maxRetries` | 3 | Failed rounds retried, with a wider flank, more copies and a lower bit score, before a side stops. |
+| `--maxIdentity` | auto | Identity above which copies are collapsed into one representative (segmental duplications). `auto`: halfway between the copies' median pairwise identity and 1, within 0.80–0.98. A number fixes it. |
+| `--curationIdentityExp` | 1.4 | Alignment cleaning in the extension rounds: columns are scored as `(1 - entropy)^curationIdentityExp * (1 - gap fraction)^curationGapExp`. |
+| `--curationGapExp` | 0.3 | See above. |
+| `--curationMaxThresh` | 0.1 | Cap on the column-score threshold used to filter columns. |
+| `--anchorLength` | 500 | Genome-anchored stop rule: each round's new bases are searched joined to the model's outer `anchorLength` bases. |
+| `--anchorSpan` | 300 | Copies spanning these anchor bases next to the new bases are the anchored copies. |
+| `--anchorMinRatio` | 0.2 | Minimum fraction of the anchored copies that must continue into the new bases. 0 disables the anchored rule. |
+| `--anchorMinCopies` | 5 | Minimum number of continuing copies (with fewer than 10 anchored copies: half of them, at least 2). A partly supported round keeps its supported bases; the side stops at the second such round in a row. |
+| `--anchorMaxJump` | 3 | The side stops when the anchored copies rise above this many times the lower count of the previous two rounds (the edge has run into a more abundant repeat). |
+| `--refineIterations` | 8 | Maximum iterations of the final genome-wide refinement of the model; 0 skips it. |
+
+With the default starting model, the seed Stockholm file must have a `#=GC RF` line marking match columns with uppercase `X`, as Dfam seeds do. To cut a Dfam seed down to a region of its consensus (for example its best conserved part):
+```bash
+bash DfamTruncationScript.sh Family.stk 81 281 [min_freq]
+```
+This keeps consensus positions 81 to 280 (the end is exclusive) and writes `<ID>.81-281.stk` and `<ID>.81-281.consensus.fa`, named after the `#=GF ID` of the input, ready for `--alnFile` and `--consensus`.
 
 ## Quickstart
 1) Clone the pipeline using Git:

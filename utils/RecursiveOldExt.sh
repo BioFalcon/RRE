@@ -16,8 +16,9 @@ anchorLength=500
 anchorSpan=300
 anchorMinRatio=0.2
 anchorMinCopies=5
+anchorMaxJump=3
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:A:Y:X:U:I:J:Z:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:A:Y:X:U:I:J:Z:L:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -53,6 +54,7 @@ do
       I ) anchorSpan="$OPTARG" ;;
       J ) anchorMinRatio="$OPTARG" ;;
       Z ) anchorMinCopies="$OPTARG" ;;
+      L ) anchorMaxJump="$OPTARG" ;;
    esac
 done
 
@@ -389,8 +391,10 @@ while [ ${Family} -lt ${NumFamilies} ];do
             fi 
         fi
 
-        #Rounds in a row whose new bases are not all supported by copies of the model edge
+        #Rounds in a row whose new bases are not all supported by copies of the model edge,
+        #and the number of copies of the model edge in each round
         AnchoredLowStreak=0
+        AnchoredHistory=""
 
         #Main loop
         while [ ${BreakNow} == "False" ] && [ ${SkipRounds} == "No" ];do
@@ -702,8 +706,18 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     --minCopies ${anchorMinCopies} \
                     --minRatio ${anchorMinRatio} > ${AnchoredPrefix}.txt
                 AnchoredSupported=$( awk '$1=="SUPPORTED"{print $2}' ${AnchoredPrefix}.txt )
+                AnchoredCopies=$( awk '$1=="ANCHORED"{print $2}' ${AnchoredPrefix}.txt )
                 echo -e "\nAnchored support: $( tr '\n' ' ' < ${AnchoredPrefix}.txt)of ${ExtendedSize} new bases"
-                if [[ ${AnchoredSupported} -ge $(( ExtendedSize - 10 )) ]];then
+                #A jump in the copies of the model edge (more than anchorMaxJump times the lower count of the
+                #two previous rounds) means the edge now lies in a more abundant neighbouring repeat
+                AnchoredLowest=$( echo ${AnchoredHistory} | tr ' ' '\n' | tail -2 | sort -n | head -1 )
+                AnchoredHistory="${AnchoredHistory} ${AnchoredCopies}"
+                if [[ $( echo ${AnchoredHistory} | wc -w ) -ge 3 ]] && [[ ${AnchoredCopies} -ge 20 ]] && \
+                    awk -v c=${AnchoredCopies} -v l=${AnchoredLowest} -v j=${anchorMaxJump} 'BEGIN{exit !(c > j*l)}';then
+                    echo -e "\nCopies of the model edge jump from ${AnchoredLowest} to ${AnchoredCopies}: a more abundant repeat next to this one"
+                    AnchoredStop=True
+                    RoundFailed=True
+                elif [[ ${AnchoredSupported} -ge $(( ExtendedSize - 10 )) ]];then
                     AnchoredLowStreak=0
                 else
                     AnchoredLowStreak=$(( AnchoredLowStreak + 1 ))

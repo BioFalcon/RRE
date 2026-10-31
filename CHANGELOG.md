@@ -86,6 +86,13 @@ are unchanged. New command line options are listed in the README under
   columns), `.aln.fa`, `.RFclean.aln.fa` (consensus columns only), `.support.tsv` and
   `.iterations.tsv`.
 
+### Examples
+- `examples/AncientExtension/MamCR1.Truncated.stk` is rebuilt from the Dfam CR1_Mam seed
+  (positions 1464-2204) with its `#=GC RF` line, which AncientMode needs; the previous copy
+  had lost it.
+- New `examples/AncientExtension/OldhAT1.Truncated.stk`: the Dfam OldhAT1 seed cut to
+  positions 2000-2399, the short seed used to develop these changes (turtle genome).
+
 ### Fixes
 - Extension size was overcounted when the previous consensus aligned poorly at the
   edge, so up to ~50 bases per round were stitched in twice (`utils/ExtensionSize.py`).

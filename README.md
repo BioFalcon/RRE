@@ -98,7 +98,7 @@ nextflow run RRE.nf \
 	--outDir ./Results \
 ```
 
-2) Using the human genome (`HumanGenome.fa`; not included in this repository) to extend an ancient repeat (CR1_Mam):
+2) Using the human genome (`HumanGenome.fa`; not included in this repository) to extend an ancient repeat (CR1_Mam). The seed is the Dfam CR1_Mam seed (DF000000110.4) cut to positions 1464-2204 of its 2204, the 3' third, with its `#=GC RF` line:
 ```bash
 nextflow run RRE.nf \
 	--Genome ./HumanGenome.fa \
@@ -109,6 +109,19 @@ nextflow run RRE.nf \
 	--extension 90 \
 	--outDir ./Results \
 ```
+3) Using a turtle genome (*Emys orbicularis*; not included in this repository) to extend an ancient DNA transposon (OldhAT1) from a short seed. The seed is the Dfam OldhAT1 seed (DF000001275.2) cut to positions 2000-2399 of its 2842, with its `#=GC RF` line:
+```bash
+nextflow run RRE.nf \
+	--Genome ./Emys_orbicularis.genome.fa \
+	--alnFile ./examples/AncientExtension/OldhAT1.Truncated.stk \
+	--workflow RRE \
+	--AncientMode \
+	--SampleSeqs 200 \
+	--extension 90 \
+	--maxRounds 80 \
+	--outDir ./Results \
+```
+
 Extending ancient repeats is a challenging task and outputs should always be manually inspected. We recommend monitoring the results of each round of extension carefully, as highly divergent families might produce incorrect outputs (e.g. inclusion of other families, truncated extension, etc.). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
 
 Sometimes the alignments are not correct due to internal misalignments, leading to incorrect merged alignments. To correct this, we recommend manually making a new merged alignment including only the correct partial alignments. For example, one could merge specifically rounds 15 through 20 as follows:

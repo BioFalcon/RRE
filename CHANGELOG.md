@@ -81,10 +81,20 @@ are unchanged. New command line options are listed in the README under
   rebuilt, until the hits grow by < 2% and the consensus changes at < 3% of positions.
   An iteration that loses > 10% of the hits is discarded. Ends with few copies are
   trimmed by coverage, and blocks of a younger, abundant family the extension ran into
-  are cut off (`utils/ForeignBlocks.py`). Outputs, in `Results/WorkDir/<Repeat>/Merge/`:
-  `<Repeat>.Refined.hmm`, `.Consensus.fa`, `.stk` (Dfam style, match and insert
-  columns), `.aln.fa`, `.RFclean.aln.fa` (consensus columns only), `.support.tsv` and
-  `.iterations.tsv`.
+  are cut off (`utils/ForeignBlocks.py`).
+- **The final model of each repeat is in `Results/WorkDir/<Repeat>/FinalModel/`**, next to
+  `Merge/`: `<Repeat>.hmm`, `.Consensus.fa`, `.stk` (Dfam style, match and insert columns),
+  `.aln.fa`, `.RFclean.aln.fa` (consensus columns only), `.support.tsv` and
+  `.iterations.tsv`; the files of each iteration are in `FinalModel/Iterations/`. If the
+  refinement is skipped (`--refineIterations 0`) or fails, `FinalModel/` holds the merged
+  model (`<Repeat>.Consensus.fa`, `<Repeat>.aln.fa`) and `NOT_REFINED.txt` says why.
+- **The refinement is its own process** (`RRE_Refinement`, `modules/04_OldExt/02_Refinement`),
+  with its own resources (label `RRE_Refinement`: 32 GB, then 64 and 128 GB). nhmmer with
+  the full-length model against the whole genome needs far more memory than the extension
+  rounds (20-26 GB for 3-5 kb models on human and coelacanth). A refinement killed for
+  memory or time now fails the step, and Nextflow retries it with more resources without
+  repeating the extension; before, the failure was hidden and the run ended without a
+  refined model.
 
 ### Examples
 - `examples/AncientExtension/MamCR1.Truncated.stk` is rebuilt from the Dfam CR1_Mam seed

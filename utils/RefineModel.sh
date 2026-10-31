@@ -33,6 +33,7 @@
 #   -C  Converged when the consensus changes at less than this fraction of positions, together with -G (Default: 0.03;
 #       near-tied columns of an old repeat keep flipping between iterations, ~1-2% of positions)
 #   -R  Stop when the consensus differs from that of iteration 1 at more than this fraction of positions (Default: 0.10)
+#   -W  Directory for the files of each iteration (Default: <OutPrefix>.Refine)
 #
 #Writes:
 #   <OutPrefix>.hmm                 final model
@@ -56,7 +57,7 @@ MaxChange=0.03
 MaxDrift=0.10
 Name=""
 
-while getopts "a:d:g:o:n:t:I:E:X:L:Q:T:D:G:C:R:" opt;do
+while getopts "a:d:g:o:n:t:I:E:X:L:Q:T:D:G:C:R:W:" opt;do
     case "$opt" in
         a ) Aln="$OPTARG" ;;
         d ) Database="$OPTARG" ;;
@@ -74,6 +75,7 @@ while getopts "a:d:g:o:n:t:I:E:X:L:Q:T:D:G:C:R:" opt;do
         G ) MinGain="$OPTARG" ;;
         C ) MaxChange="$OPTARG" ;;
         R ) MaxDrift="$OPTARG" ;;
+        W ) Work="$OPTARG" ;;
     esac
 done
 
@@ -83,7 +85,7 @@ if [ -z "${Aln}" ] || [ -z "${Database}" ] || [ -z "${Genome}" ] || [ -z "${Out}
 fi
 UtilsDir=$(dirname $(realpath $0))
 [ -z "${Name}" ] && Name=$(basename ${Out})
-Work=${Out}.Refine
+[ -z "${Work}" ] && Work=${Out}.Refine
 mkdir -p ${Work}
 
 #Stockholm of a fasta alignment with the given column calls ('-' = not a match column) as RF
@@ -125,11 +127,11 @@ if [ -f ${ColumnsFile} ] && [ $(tr -d '\n' < ${ColumnsFile} | wc -c) -eq $(awk '
     FastaToStockholm ${Aln} ${ColumnsFile} ${Work}/Iter00.stk ${Name}
     echo "Iteration 00: match columns from ${ColumnsFile}"
 else
-    python3 ${UtilsDir}/HandRF.py --input ${Aln} --output ${Work}/Iter00 --minOcc ${MinOcc} --name ${Name} > ${Work}/Iter00.HandRF.log || exit 1
+    python3 ${UtilsDir}/HandRF.py --input ${Aln} --output ${Work}/Iter00 --minOcc ${MinOcc} --name ${Name} > ${Work}/Iter00.HandRF.log || exit
     echo "Iteration 00: match columns from HandRF.py"
 fi
 hmmbuild --hand --dna --cpu ${CPU} --seed 1992 --fragthresh 1.0 --maxinsertlen 10 --eentexp -n ${Name} \
-    ${Work}/Iter00.hmm ${Work}/Iter00.stk > /dev/null || { echo "hmmbuild failed on the starting alignment"; exit 1; }
+    ${Work}/Iter00.hmm ${Work}/Iter00.stk > /dev/null || { Status=$?; echo "hmmbuild failed on the starting alignment"; exit ${Status}; }
 hmmemit -c ${Work}/Iter00.hmm > ${Work}/Iter00.Consensus.fa
 echo -e "iteration\thits\tused\tcopies\tmatch_columns\tcoverage_trimmed\tconsensus_length\thit_gain\tconsensus_change\tdrift_from_iter1" > ${Out}.iterations.tsv
 echo -e "0\tNA\tNA\tNA\t$(grep "^LENG" ${Work}/Iter00.hmm | awk '{print $2}')\tNA\t$(grep -v ">" ${Work}/Iter00.Consensus.fa | tr -d '\n' | wc -c)\tNA\tNA\tNA" >> ${Out}.iterations.tsv
@@ -141,7 +143,7 @@ for (( k=1; k<=Iterations; k++ ));do
 
     #Genome-wide search with the current model
     nhmmer --cpu ${CPU} --seed 1992 --noali --notextw -E ${MaxE} \
-        --tblout ${Work}/Iter${It}.tbl ${Work}/Iter${Prev}.hmm ${Database} > /dev/null || { echo "nhmmer failed"; exit 1; }
+        --tblout ${Work}/Iter${It}.tbl ${Work}/Iter${Prev}.hmm ${Database} > /dev/null || { Status=$?; echo "nhmmer failed (exit ${Status})"; exit ${Status}; }
 
     #Blocks of a younger abundant family: only the model between them is kept
     Len=$(grep "^LENG" ${Work}/Iter${Prev}.hmm | awk '{print $2}')
@@ -175,7 +177,7 @@ for (( k=1; k<=Iterations; k++ ));do
 
     #Align the copies to the model: match columns plus insert columns, as in Dfam seed alignments
     hmmalign --dna --trim --outformat afa ${Work}/Iter${Prev}.hmm ${Work}/Iter${It}.copies.fa \
-        > ${Work}/Iter${It}.hmmalign.afa || { echo "hmmalign failed"; exit 1; }
+        > ${Work}/Iter${It}.hmmalign.afa || { Status=$?; echo "hmmalign failed (exit ${Status})"; exit ${Status}; }
     #Columns of the kept match states (and the inserts between them), as an uppercase fasta alignment
     python3 - ${Work}/Iter${It}.hmmalign.afa ${KeepS} ${KeepE} > ${Work}/Iter${It}.aln.fa <<'EOF'
 import sys
@@ -200,12 +202,12 @@ EOF
 
     #New match columns from the occupancy of the hits; ends with few hits are trimmed
     python3 ${UtilsDir}/HandRF.py --input ${Work}/Iter${It}.aln.fa --output ${Work}/Iter${It} \
-        --minOcc ${MinOcc} --trimCoverage ${TrimCov} --name ${Name} > ${Work}/Iter${It}.HandRF.log || exit 1
+        --minOcc ${MinOcc} --trimCoverage ${TrimCov} --name ${Name} > ${Work}/Iter${It}.HandRF.log || exit
     Match=$(awk '$1=="MATCH_COLUMNS"{print $2}' ${Work}/Iter${It}.HandRF.log)
     CovTrim=$(awk '$1=="COVERAGE_TRIMMED_MATCH_COLUMNS"{print $2}' ${Work}/Iter${It}.HandRF.log)
 
     hmmbuild --hand --dna --cpu ${CPU} --seed 1992 --fragthresh 1.0 --maxinsertlen 10 --eentexp -n ${Name} \
-        ${Work}/Iter${It}.hmm ${Work}/Iter${It}.stk > /dev/null || { echo "hmmbuild failed"; exit 1; }
+        ${Work}/Iter${It}.hmm ${Work}/Iter${It}.stk > /dev/null || { Status=$?; echo "hmmbuild failed (exit ${Status})"; exit ${Status}; }
     hmmemit -c ${Work}/Iter${It}.hmm > ${Work}/Iter${It}.Consensus.fa
 
     #Change from the previous model, gain in hits, and drift from the first refined model

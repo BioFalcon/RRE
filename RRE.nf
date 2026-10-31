@@ -190,6 +190,7 @@ RREOLDScript       = file("./utils/RecursiveOldExt.sh")
 CoordExtractScript = file("./utils/CoordinateExtraction.py")
 OutlierScript      = file("./utils/FamilyDetection.py")
 VerticalScript     = file("./utils/VerticalCleaning.py")
+RefineScript       = file("./utils/RefineModel.sh")
 
 /************************************************
 ****                                         ****
@@ -250,6 +251,9 @@ if ( params.AncientMode ){
 
 ////Recursive Extension
 include {RRE_RecursiveExtension } from './modules/02_RRE/02_RecursiveExtension/main.nf'
+
+////Genome-wide refinement of the final model (AncientMode)
+include {RRE_Refinement } from './modules/04_OldExt/02_Refinement/main.nf'
 
 //HEEA
 ////Exntension HEEA
@@ -316,6 +320,7 @@ workflow RRE{
         VerticalScript
         CoverageScript
         SeedAln
+        RefineScript
 
     main:
     //////////////////////////////////////////////
@@ -360,6 +365,20 @@ workflow RRE{
                         RREScript,
                         CoordExtractScript,
                         VerticalScript )
+
+    //////////////////////////////////////////////
+    //Refinement (AncientMode)
+    //////////////////////////////////////////////
+    //Its own step, with its own resources: a step killed for memory is retried without repeating the extension.
+    //Writes the final model of each repeat to WorkDir/<Repeat>/FinalModel (the merged model if not refined)
+    if ( params.AncientMode ){
+    RRE_Refinement( RRE_RecursiveExtension.out,
+                    HMMRDB,
+                    FAIndex,
+                    Genome,
+                    outDir,
+                    RefineScript )
+    }
     
     //////////////////////////////////////////////
     //Polishing
@@ -402,6 +421,7 @@ workflow{
     RREOLDScript       = Channel.fromPath(RREOLDScript)
     CoordExtractScript = Channel.fromPath(CoordExtractScript)
     VerticalScript     = Channel.fromPath(VerticalScript)
+    RefineScript       = Channel.fromPath(RefineScript)
     hyperTCh           = Channel.from(hyperT)
 
     /************************
@@ -459,7 +479,8 @@ workflow{
                            RREOLDScript.collect(),
                            VerticalScript.collect(),
                            CoverageScript.collect(),
-                           SeedAln.collect() )
+                           SeedAln.collect(),
+                           RefineScript.collect() )
 
     } else if ( params.workflow == "HEEA" ){
         HEEA( HMMSelection.out.splitText(by:1, file:true),

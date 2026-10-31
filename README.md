@@ -57,7 +57,7 @@ AncientMode options (only used with `--AncientMode`; see `CHANGELOG.md` for how 
 | `--anchorMinRatio` | 0.2 | Minimum fraction of the anchored copies that must continue into the new bases. 0 disables the anchored rule. |
 | `--anchorMinCopies` | 5 | Minimum number of continuing copies (with fewer than 10 anchored copies: half of them, at least 2). A partly supported round keeps its supported bases; the side stops at the second such round in a row. |
 | `--anchorMaxJump` | 3 | The side stops when the anchored copies rise above this many times the lower count of the previous two rounds (the edge has run into a more abundant repeat). |
-| `--refineIterations` | 8 | Maximum iterations of the final genome-wide refinement of the model; 0 skips it. |
+| `--refineIterations` | 8 | Maximum iterations of the final genome-wide refinement of the model; 0 skips it. The refinement is its own step (`RRE_Refinement`, label `RRE_Refinement` in `nextflow.config`), with more memory than the extension. The final model of each repeat is written to `Results/WorkDir/<Repeat>/FinalModel/`. |
 
 In AncientMode the seed Stockholm file (`--alnFile`) is the only input describing the families; `--consensus` is ignored. Each family needs a `#=GF ID` line, and a `#=GC RF` line marking its match columns (any non-gap character), as Dfam seeds have; without one, the run stops unless `--rfAll` or `--rfFromOccupancy` is given. The family's class is read from `#=GF TP` (`Unknown` if absent), and its consensus is the consensus of the model built from the match columns. Every AncientMode model, including the first genome search, is built from the match columns (`hmmbuild --hand`). To cut a Dfam seed down to a region of its consensus (for example its best conserved part):
 ```bash

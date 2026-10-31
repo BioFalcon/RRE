@@ -17,7 +17,7 @@ process RRE_RecursiveExtension {
     tuple val(RepeatID), path("MERGE.GOOD.CHECK")
 
     script:
-    def AncientArgs = params.AncientMode ? "-M ${params.maxRetries} -K ${params.minConservation} -W ${params.supportWindow} -B ${params.minBits} -Q ${params.rfMinOcc} -N ${params.minCopies} -D ${params.maxIdentity} -G ${params.refineIterations} -A ${params.curationIdentityExp} -Y ${params.curationGapExp} -X ${params.curationMaxThresh} -U ${params.anchorLength} -I ${params.anchorSpan} -J ${params.anchorMinRatio} -Z ${params.anchorMinCopies} -L ${params.anchorMaxJump}" : ""
+    def AncientArgs = params.AncientMode ? "-M ${params.maxRetries} -K ${params.minConservation} -W ${params.supportWindow} -B ${params.minBits} -Q ${params.rfMinOcc} -N ${params.minCopies} -D ${params.maxIdentity} -A ${params.curationIdentityExp} -Y ${params.curationGapExp} -X ${params.curationMaxThresh} -U ${params.anchorLength} -I ${params.anchorSpan} -J ${params.anchorMinRatio} -Z ${params.anchorMinCopies} -L ${params.anchorMaxJump}" : ""
     """
     bash ${RREScript} \\
         -i ${RepeatID} \\

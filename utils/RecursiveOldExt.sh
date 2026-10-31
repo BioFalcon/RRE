@@ -8,7 +8,6 @@ minBits=30
 rfMinOcc=0.5
 minCopies=10
 maxIdentity=auto
-refineIterations=8
 curationIdentityExp=1.4
 curationGapExp=0.3
 curationMaxThresh=0.1
@@ -18,7 +17,7 @@ anchorMinRatio=0.2
 anchorMinCopies=5
 anchorMaxJump=3
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:A:Y:X:U:I:J:Z:L:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:A:Y:X:U:I:J:Z:L:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -46,7 +45,6 @@ do
       Q ) rfMinOcc="$OPTARG" ;;
       N ) minCopies="$OPTARG" ;;
       D ) maxIdentity="$OPTARG" ;;
-      G ) refineIterations="$OPTARG" ;;
       A ) curationIdentityExp="$OPTARG" ;;
       Y ) curationGapExp="$OPTARG" ;;
       X ) curationMaxThresh="$OPTARG" ;;
@@ -917,20 +915,7 @@ if [ ! -f ./MERGE.GOOD.CHECK ];then
             ./Merge.Consensus.fa
     fi
 
-    #Genome-wide refinement of the final model: hits aligned with hmmalign, match columns by occupancy (--hand)
-    if [ ${refineIterations} -gt 0 ] && [ -f ./Merge.aln.fa ];then
-        echo -e "\nRefining the final model genome-wide (${refineIterations} iterations at most)"
-        bash ${UtilsDir}/RefineModel.sh \
-            -a ./Merge.aln.fa \
-            -d ${oldWorkDir}/${HMMRDB} \
-            -g ${oldWorkDir}/${Genome} \
-            -o ./${RepeatID}.Refined \
-            -n ${RepeatID} \
-            -t ${CPU} \
-            -I ${refineIterations} \
-            -Q ${rfMinOcc} \
-            -D ${maxIdentity} || echo "Refinement failed, the unrefined model is in Merge.aln.fa"
-    fi
+    #The merged model is refined genome-wide in its own step (RRE_Refinement)
 
     #Make check
     > ./MERGE.GOOD.CHECK

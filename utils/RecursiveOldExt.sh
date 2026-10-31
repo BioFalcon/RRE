@@ -12,8 +12,12 @@ refineIterations=8
 curationIdentityExp=2
 curationGapExp=0.5
 curationMaxThresh=0.1
+anchorLength=500
+anchorSpan=300
+anchorMinRatio=0.2
+anchorMinCopies=5
 
-while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:A:Y:X:" opt
+while getopts "i:l:r:c:t:e:g:h:x:o:C:O:s:m:p:S:R:F:T:P:V:M:K:W:B:Q:N:D:G:A:Y:X:U:I:J:Z:" opt
 do
    case "$opt" in
       i ) RepeatID="$OPTARG" ;;
@@ -45,6 +49,10 @@ do
       A ) curationIdentityExp="$OPTARG" ;;
       Y ) curationGapExp="$OPTARG" ;;
       X ) curationMaxThresh="$OPTARG" ;;
+      U ) anchorLength="$OPTARG" ;;
+      I ) anchorSpan="$OPTARG" ;;
+      J ) anchorMinRatio="$OPTARG" ;;
+      Z ) anchorMinCopies="$OPTARG" ;;
    esac
 done
 
@@ -381,6 +389,9 @@ while [ ${Family} -lt ${NumFamilies} ];do
             fi 
         fi
 
+        #Rounds in a row whose new bases are not all supported by copies of the model edge
+        AnchoredLowStreak=0
+
         #Main loop
         while [ ${BreakNow} == "False" ] && [ ${SkipRounds} == "No" ];do
             #Make dir for this round
@@ -657,10 +668,62 @@ while [ ${Family} -lt ${NumFamilies} ];do
                 exit 1
             fi
 
+            #Genome-anchored support: genomic copies of the model's outer anchorLength bases must continue colinearly
+            #into the new bases. A real end shows as a drop in the fraction of anchored copies that continue,
+            #drift into unique flank or a neighbouring repeat as new bases reached by few anchored copies.
+            #A round is low when not all its new bases are supported: keep the supported bases (or fail the round if
+            #too few), and stop this side at the second low round in a row (single low rounds happen inside repeats).
+            AnchoredEnd=False
+            AnchoredStop=False
+            if [[ ${ExtendedSize} -ge ${Increase} ]] && awk -v r=${anchorMinRatio} 'BEGIN{exit !(r>0)}';then
+                AnchoredPrefix=./Round_${CurrRound}/09_CurrentConsensi.${LowerCase}.Round${CurrRound}.Anchored
+                python3 ${UtilsDir}/AnchoredSupport.py build \
+                    --round ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Consensus.fa \
+                    --merged ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.Consensus.fa \
+                    --side ${LowerCase} \
+                    --extension ${ExtendedSize} \
+                    --anchor ${anchorLength} \
+                    --output ${AnchoredPrefix}.fa
+                nhmmer \
+                    --cpu ${CPU} \
+                    --dna \
+                    --notextw \
+                    --noali \
+                    -E 1e-5 \
+                    --tblout ${AnchoredPrefix}.tblout \
+                    ${AnchoredPrefix}.fa \
+                    ../Staging/HMMDB_Genome > /dev/null
+                python3 ${UtilsDir}/AnchoredSupport.py score \
+                    --query ${AnchoredPrefix}.fa \
+                    --tbl ${AnchoredPrefix}.tblout \
+                    --side ${LowerCase} \
+                    --extension ${ExtendedSize} \
+                    --span ${anchorSpan} \
+                    --minCopies ${anchorMinCopies} \
+                    --minRatio ${anchorMinRatio} > ${AnchoredPrefix}.txt
+                AnchoredSupported=$( awk '$1=="SUPPORTED"{print $2}' ${AnchoredPrefix}.txt )
+                echo -e "\nAnchored support: $( tr '\n' ' ' < ${AnchoredPrefix}.txt)of ${ExtendedSize} new bases"
+                if [[ ${AnchoredSupported} -ge $(( ExtendedSize - 10 )) ]];then
+                    AnchoredLowStreak=0
+                else
+                    AnchoredLowStreak=$(( AnchoredLowStreak + 1 ))
+                    if [[ ${AnchoredLowStreak} -ge 2 ]];then
+                        echo -e "\nSecond round in a row not supported by copies of the model edge: end of the repeat"
+                        AnchoredStop=True
+                        RoundFailed=True
+                    elif [[ ${AnchoredSupported} -lt ${Increase} ]];then
+                        echo -e "\nThe new bases are not supported by copies of the model edge"
+                        RoundFailed=True
+                    else
+                        AnchoredEnd=True
+                    fi
+                fi
+            fi
+
             if [[ ${ExtendedSize} -lt ${Increase} ]];then
                 echo -e "\nOnly ${ExtendedSize} supported bases added (minimum ${Increase})"
                 RoundFailed=True
-            else
+            elif [[ ${RoundFailed} == "False" ]];then
                 #Add this round to the merged model along the alignment of its consensus to the merged consensus
                 python3 ${StitchScript} \
                     --merged ./Round_${PrevRound}/07_CurrentConsensi.${LowerCase}.Round${PrevRound}.Extended.Curated.aln.fa \
@@ -668,7 +731,18 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     --extension ${ExtendedSize} \
                     --side ${LowerCase} \
                     --output ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
-                    --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} || RoundFailed=True
+                    --SeqID ${RepeatID}#___Round${LetterCase}${CurrRound} | tee ./Round_${CurrRound}/07_Stitch.log
+                [ ${PIPESTATUS[0]} -eq 0 ] || RoundFailed=True
+
+                #Low anchored support: drop the new bases past it
+                if [[ ${AnchoredEnd} == "True" ]] && [[ ${RoundFailed} == "False" ]];then
+                    NewPositions=$( awk '$1=="STITCH_NEW_POSITIONS"{print $2}' ./Round_${CurrRound}/07_Stitch.log )
+                    echo -e "\nLow anchored support: keeping ${AnchoredSupported} of ${NewPositions:-?} new positions"
+                    python3 ${UtilsDir}/TrimEdge.py \
+                        --prefix ./Round_${CurrRound}/07_CurrentConsensi.${LowerCase}.Round${CurrRound}.Extended.Curated \
+                        --side ${LowerCase} \
+                        --positions $(( ${NewPositions:-${ExtendedSize}} - AnchoredSupported ))
+                fi
 
                 #Next search window: the new bases, and at least ExtensionSize in from the edge,
                 #so the next round is not left with only a handful of copies after a small extension
@@ -689,6 +763,12 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     FailedDir=${FailedDir}_x
                 done
                 mv ./Round_${CurrRound} ${FailedDir}
+
+                if [[ ${AnchoredStop} == "True" ]];then
+                    echo -e "\nStopping the ${LowerCase} side at the end of the repeat"
+                    BreakNow=True
+                    break
+                fi
 
                 if [[ ${NextLevel} -gt ${maxRetries} ]];then
                     echo -e "\nNo supported extension after ${maxRetries} retries, stopping the ${LowerCase} side"

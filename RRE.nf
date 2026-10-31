@@ -86,6 +86,10 @@ params.refineIterations            = 8      //Max. iterations of the final genom
 params.curationIdentityExp        = 2      //Alignment cleaning (MSACuration.py) in the extension rounds: column score is
 params.curationGapExp             = 0.5    //(1 - entropy)^curationIdentityExp * (1 - gap fraction)^curationGapExp,
 params.curationMaxThresh          = 0.1    //and the threshold used to filter columns is capped at curationMaxThresh
+params.anchorLength              = 500    //Extension rounds: genomic copies of the model's outer anchorLength bases must
+params.anchorSpan                = 300    //continue colinearly into the new bases: of the copies spanning the anchorSpan
+params.anchorMinRatio            = 0.2    //anchor bases next to them, at least anchorMinRatio and anchorMinCopies; the
+params.anchorMinCopies           = 5      //side stops at the second unsupported round in a row (anchorMinRatio 0: no check)
 params.centralRound                = false  //AncientMode: rebuild the starting model from a MAFFT alignment of the seed's copies plus
                                             //flanks before extending. By default the seed itself (its #=GC RF columns) is the starting model
 

@@ -15,7 +15,8 @@ def usage():
         print("score: reads an nhmmer search of the query against the genome, chains colinear hits per locus into copies,")
         print("       counts copies spanning the anchor and how many of them reach each distance into the new bases")
         print("--span        | -a\t Anchored copies must span this many anchor bases next to the new bases (Default: 300)")
-        print("--minCopies   | -n\t Anchored copies that must reach a base (Default: 5)")
+        print("--minCopies   | -n\t Anchored copies that must reach a base (Default: 5); with fewer than 2 x minCopies")
+        print("              |    \t anchored copies (low-copy genomes), half of them, and never fewer than 2")
         print("--minRatio    | -f\t Fraction of the anchored copies that must reach a base (Default: 0.2)")
         print("\nscore prints ANCHORED <copies>, CONTINUING <copies reaching the outermost new base> and")
         print("SUPPORTED <new bases reached by enough anchored copies, counted from the model edge>")
@@ -108,7 +109,8 @@ def main():
     else:
         Anchored=[b for a,b in Copies if a<=Anchor-Span+1+Tolerance and b>=Anchor-Tolerance]
         Reach=lambda d: sum(1 for b in Anchored if b>=Anchor+d-Tolerance)
-    Need=max(MinCopies, MinRatio*len(Anchored))
+    #In low-copy genomes the copy minimum scales down to half of the anchored copies (at least 2)
+    Need=max(2, min(MinCopies, (len(Anchored)+1)//2), MinRatio*len(Anchored))
     Supported=0
     for d in range(1,Extension+1):
         if Reach(d) < Need:

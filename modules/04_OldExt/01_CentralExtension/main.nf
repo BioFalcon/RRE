@@ -208,7 +208,7 @@ process RRE_CentralExtension{
                 --informat afa \\
                 --seed 1992 \\
                 --cpu ${task.cpus} \\
-                --symfrac 0.20 \\
+                --symfrac 0 \\
                 --fragthresh 1.0 \\
                 --wnone \\
                 -n \${Repeat} \\

@@ -83,8 +83,8 @@ params.minCopies                   = 10    //Min. copies supporting each column 
 params.maxIdentity                 = "auto" //Identity above which copies (segmental duplications) are collapsed into one representative;
                                             //auto: halfway between the median pairwise identity of the copies and 1
 params.refineIterations            = 8      //Max. iterations of the final genome-wide refinement of the model (0: no refinement)
-params.curationIdentityExp        = 2      //Alignment cleaning (MSACuration.py) in the extension rounds: column score is
-params.curationGapExp             = 0.5    //(1 - entropy)^curationIdentityExp * (1 - gap fraction)^curationGapExp,
+params.curationIdentityExp        = 1.4    //AncientMode alignment cleaning (MSACuration.py) in the extension rounds: column score is
+params.curationGapExp             = 0.3    //(1 - entropy)^curationIdentityExp * (1 - gap fraction)^curationGapExp,
 params.curationMaxThresh          = 0.1    //and the threshold used to filter columns is capped at curationMaxThresh
 params.anchorLength              = 500    //Extension rounds: genomic copies of the model's outer anchorLength bases must
 params.anchorSpan                = 300    //continue colinearly into the new bases: of the copies spanning the anchorSpan

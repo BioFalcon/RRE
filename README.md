@@ -122,30 +122,8 @@ nextflow run RRE.nf \
 	--outDir ./Results \
 ```
 
-Extending ancient repeats is a challenging task and outputs should always be manually inspected. We recommend monitoring the results of each round of extension carefully, as highly divergent families might produce incorrect outputs (e.g. inclusion of other families, truncated extension, etc.). To do so, check the `Results/WorkDir/REPEAT_ID/Left/` or `RRE/Results/WorkDir/REPEAT_ID/Right` to examine each round individually. 
+Extending ancient repeats is a challenging task and outputs should always be manually inspected. We recommend monitoring the results of each round of extension carefully, as highly decayed families might produce incorrect outputs (e.g. inclusion of other families, truncated extension, etc.). To do so, check the `Results/WorkDir/REPEAT_ID/Merge/` directory to examine each round individually. 
 
-Sometimes the alignments are not correct due to internal misalignments, leading to incorrect merged alignments. To correct this, we recommend manually making a new merged alignment including only the correct partial alignments. For example, one could merge specifically rounds 15 through 20 as follows:
-```bash
-mkdir MergeConsensus
-
-cp ./Results/WorkDir/${RepeatID}/Left/Round_14/05_CurrentConsensi.Left.Round14.Extended.aln.fa ./MergeConsensus/MergedAln_Round14.aln.fa
-
-for i in $(seq 15 1 20); do 
-	RoundNum=$(echo $i | awk '{ printf("%02d\n", $1) }')
-	PrevAln=$(echo $i  | awk '{ printf("%02d\n", $1 - 1) }')
-
-	mafft --thread 32 \
-		  --seed ./Results/WorkDir/${RepeatID}/Left/Round_${RoundNum}/06_CurrentConsensi.Left.Round${RoundNum}.Extended.tmp2.aln.fa \
-		  --seed ./MergeConsensus/MergedAln_Round${PrevAln}.aln.fa \
-		  /dev/null | \
-	seqkit grep -v -r -p "DUP" > ./MergeConsensus/TEMP_Round${RoundNum}.aln.fa
-
-	python ../../Staging/VerticalCleaning.py \
-		-i ./MergeConsensus/TEMP_Round${RoundNum}.aln.fa \
-		-o ./MergeConsensus/MergedAln_Round${RoundNum} \
-		--perc 0.3
-done
-```
 
 ## Directory Structure
 All files related to the run will be contained in the directory specified in the `--outDir` parameter. The structure is as follows:

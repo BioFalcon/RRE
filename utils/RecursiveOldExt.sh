@@ -619,6 +619,7 @@ while [ ${Family} -lt ${NumFamilies} ];do
                     --gapExp ${curationGapExp} \
                     --MaxThresh ${curationMaxThresh} \
                     --firstPeak \
+                    --stats ./Round_${CurrRound}/05_CurrentConsensi.${LowerCase}.Round${CurrRound}.Curation.json \
                     --Plots
 
             #Rename output 

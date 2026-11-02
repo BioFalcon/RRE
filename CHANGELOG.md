@@ -69,6 +69,22 @@ are unchanged. New command line options are listed in the README under
   for the AncientMode rounds (`--curationIdentityExp`, `--curationGapExp`,
   `--curationMaxThresh`). AncientMode now defaults to 1.4 and 0.3 (was 2 and 0.5);
   other modes keep 2 and 0.5.
+- **Report of the alignment cleaning.** `MSACuration.py --stats <file.json>` writes the
+  column scores of the raw alignment, their density, its peaks, the valley after the first
+  peak, the cap and the threshold used. Each AncientMode round writes
+  `05_CurrentConsensi.<Side>.RoundNN.Curation.json`, and a new step (`RRE_CurationReport`,
+  `utils/CurationReport.py`) collects them into `Results/WorkDir/<Repeat>/Report/`:
+  `<Repeat>.CurationReport.pdf`: the threshold per round on both sides; the final model
+  from the alignment of its copies (consensus columns, each copy counted only within its own
+  span, since most copies are fragments): depth, agreement with the consensus base,
+  deletions and call margin along the model, and where copies start and end; the same
+  metrics with copy divergence and length for the merged alignment and each refinement
+  iteration, overlaid; then the score distribution of every round and failed attempt, with
+  the valley, cap and threshold used. Tables: `<Repeat>.CurationRounds.tsv` (one row per
+  attempt), `<Repeat>.RefinementColumns.tsv` (one row per iteration) and
+  `<Repeat>.FinalModelColumns.tsv` (one row per model position). The step runs after the
+  refinement. Rounds run before this change have no scores and are left
+  out of the round pages.
 
 ### Merged model
 - **Rounds are stitched, not re-aligned** (`utils/StitchMerge.py`). Re-aligning each

@@ -51,7 +51,7 @@ AncientMode options (only used with `--AncientMode`; see `CHANGELOG.md` for how 
 | `--maxIdentity` | auto | Identity above which copies are collapsed into one representative (segmental duplications). `auto`: halfway between the copies' median pairwise identity and 1, within 0.80–0.98. A number fixes it. |
 | `--curationIdentityExp` | 1.4 | Alignment cleaning in the extension rounds: columns are scored as `(1 - entropy)^curationIdentityExp * (1 - gap fraction)^curationGapExp`. |
 | `--curationGapExp` | 0.3 | See above. |
-| `--curationMaxThresh` | 0.1 | Cap on the column-score threshold used to filter columns. |
+| `--curationMaxThresh` | 0.1 | Cap on the column-score threshold used to filter columns. `Results/WorkDir/<Repeat>/Report/<Repeat>.CurationReport.pdf` shows, for every round and failed attempt, the distribution of the column scores, the valley selected and whether the cap was used (values in `<Repeat>.CurationRounds.tsv`), then the final model from the alignment of its copies: depth, agreement with the consensus base, deletions and call margin along the model, and where copies start and end (`<Repeat>.FinalModelColumns.tsv`), and the same metrics with copy divergence and length for the merged alignment and each refinement iteration, overlaid (`<Repeat>.RefinementColumns.tsv`). |
 | `--anchorLength` | 500 | Genome-anchored stop rule: each round's new bases are searched joined to the model's outer `anchorLength` bases. |
 | `--anchorSpan` | 300 | Copies spanning these anchor bases next to the new bases are the anchored copies. |
 | `--anchorMinRatio` | 0.2 | Minimum fraction of the anchored copies that must continue into the new bases. 0 disables the anchored rule. |

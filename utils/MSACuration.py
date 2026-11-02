@@ -5,6 +5,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from scipy.stats import gaussian_kde
 from scipy.signal import find_peaks
 import getopt
+import json
 import sys
 import polars as pl
 import matplotlib.pyplot as plt
@@ -72,6 +73,7 @@ def usage():
         print("--zero         | -Z\t Adds a threshold of 0 to the list (Default: False)")
         print("--zeroOnly     | -O\t Only run with threshold zero (Default: False)")
         print("--firstPeak    | -F\t Only remove the first peak, ignoring --NoiseThresh (Default: False)")
+        print("--stats        | -J\t Write the column scores, their density, the peaks and the thresholds used to this JSON file (Default: none)")
         print("--help         | -h\t This beautiful help message :)")
         exit()
 
@@ -96,7 +98,7 @@ def logmsg(input, output, MinCoverage, MainWindow, StepWindow, ID_Sequence, Plot
 ##Main function
 def main():
     try:
-        options, remainder = getopt.getopt(sys.argv[1:],'i:o:m:W:S:t:X:A:G:I:PN:ZOFh', ['input=','output=','MinCoverage=','MainWindow=','StepWindow=','MinThresh=','MaxThresh=','identityExp=','gapExp=','SeqID=','Plots','NoiseThresh=','short','zero','zeroOnly','firstPeak','help'])
+        options, remainder = getopt.getopt(sys.argv[1:],'i:o:m:W:S:t:X:A:G:I:PN:ZOFJ:h', ['input=','output=','MinCoverage=','MainWindow=','StepWindow=','MinThresh=','MaxThresh=','identityExp=','gapExp=','SeqID=','Plots','NoiseThresh=','short','zero','zeroOnly','firstPeak','stats=','help'])
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -114,6 +116,7 @@ def main():
     ZeroOnly     = False
     FirstPeak    = False
     MaxThresh    = 0.1
+    StatsFile    = None
 
     #Parse arguments
     for opt, arg in options:
@@ -150,6 +153,8 @@ def main():
             ZeroOnly = True
         elif opt in ('--firstPeak','-F'):
             FirstPeak = True
+        elif opt in ('--stats','-J'):
+            StatsFile = arg
         elif opt in ('--help','-h'):
             usage()
 
@@ -169,6 +174,12 @@ def main():
     ##########Calculate Gaps and Bits of the raw alignment
     print("Step 2: Removimg gappy positions")
     Bits, Gaps = BitGap_Calc(Aln_DF)
+    #Column scores of the raw alignment and how they were cut, for the report of the run (--stats)
+    Stats = {"sequences": Aln_DF.shape[0], "columns": len(Bits), "identity_exp": IdentityExp, "gap_exp": GapExp,
+             "max_thresh": MaxThresh, "min_coverage": MinCoverage, "first_peak": FirstPeak,
+             "scores": [round(float(x), 4) for x in Bits],
+             "gap_fraction": [round(x/Aln_DF.shape[0], 4) for x in Gaps],
+             "mode": "single_value", "cuts": []}
 
     ##########First Plot
     #First Plot before gap removal
@@ -217,6 +228,10 @@ def main():
         ##Calculate peaks
         Peaks,_ =find_peaks( DensiVal, prominence=(0.1, None) )
         peakVals = [ [x/100 for x in range(-50,100)][x] for x in Peaks ]
+        Stats["grid"] = [x/100 for x in range(-50,100)]
+        Stats["density"] = [round(float(x), 5) for x in DensiVal]
+        Stats["peaks"] = peakVals
+        Stats["mode"] = "gaps_only"
 
         ##Plot peaks
         if Plots:
@@ -278,6 +293,9 @@ def main():
                     if Slope[posSlope] > 0:
                         break
                 posSlopePos = [x/100 for x in range(-50,100)][posSlope]
+                #The valley after the peak; not found if the density never rises again before 0.5
+                Valley = posSlopePos
+                ValleyFound = bool(Slope[posSlope] > 0)
                 # Failsafe: cap the actual filtering threshold (Default: 0.1)
                 posSlopePos = min(posSlopePos, MaxThresh)
                 for idx2, CurrWindow in enumerate(StepWindow):
@@ -298,9 +316,14 @@ def main():
                         Bits_Sliding.append(np.median(Bits[i:i + MainWindow]))
                     if Plots:
                         axs[idx2+1].plot(range(0,len(Bits_Sliding)), Bits_Sliding, color="#4a74f0")
+                ColsAfterWindows = Aln_DFTemp.shape[1] - 1
                 ThresholdGaps = Aln_DFTemp.shape[0] - MinCoverage
                 toKeep=( np.where([ x < ThresholdGaps for x in Gaps])[0] )
                 Aln_DFTemp = Aln_DFTemp[:, [0] + ( toKeep + 1 ).tolist()  ] 
+                Stats["mode"] = "valley"
+                Stats["cuts"].append({"peak": SelectedPeaksVals[idx], "valley": Valley, "valley_found": ValleyFound,
+                                      "threshold": posSlopePos, "cap_reached": bool(Valley > MaxThresh),
+                                      "columns_after_windows": ColsAfterWindows, "columns_kept": Aln_DFTemp.shape[1] - 1})
                 ConsensusSeq = ""
                 for i in Aln_DFTemp.columns[1:]:
                     Bases= list(set(Aln_DFTemp[:,i]))
@@ -371,6 +394,10 @@ def main():
         DF_to_Fasta(Aln_DFTemp, output + "__Peak0.aln.fa")
 
 
+
+    if StatsFile is not None:
+        with open(StatsFile, "w") as Out:
+            json.dump(Stats, Out)
 
     print("Step 5: Generating other outputs")
     #Write outputs

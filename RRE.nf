@@ -191,6 +191,7 @@ CoordExtractScript = file("./utils/CoordinateExtraction.py")
 OutlierScript      = file("./utils/FamilyDetection.py")
 VerticalScript     = file("./utils/VerticalCleaning.py")
 RefineScript       = file("./utils/RefineModel.sh")
+ReportScript       = file("./utils/CurationReport.py")
 
 /************************************************
 ****                                         ****
@@ -254,6 +255,7 @@ include {RRE_RecursiveExtension } from './modules/02_RRE/02_RecursiveExtension/m
 
 ////Genome-wide refinement of the final model (AncientMode)
 include {RRE_Refinement } from './modules/04_OldExt/02_Refinement/main.nf'
+include {RRE_CurationReport } from './modules/04_OldExt/03_CurationReport/main.nf'
 
 //HEEA
 ////Exntension HEEA
@@ -321,6 +323,7 @@ workflow RRE{
         CoverageScript
         SeedAln
         RefineScript
+        ReportScript
 
     main:
     //////////////////////////////////////////////
@@ -378,6 +381,11 @@ workflow RRE{
                     Genome,
                     outDir,
                     RefineScript )
+
+    //Report of the alignment cleaning in each extension round and of the columns of the refined model: WorkDir/<Repeat>/Report
+    RRE_CurationReport( RRE_Refinement.out,
+                        outDir,
+                        ReportScript )
     }
     
     //////////////////////////////////////////////
@@ -422,6 +430,7 @@ workflow{
     CoordExtractScript = Channel.fromPath(CoordExtractScript)
     VerticalScript     = Channel.fromPath(VerticalScript)
     RefineScript       = Channel.fromPath(RefineScript)
+    ReportScript       = Channel.fromPath(ReportScript)
     hyperTCh           = Channel.from(hyperT)
 
     /************************
@@ -480,7 +489,8 @@ workflow{
                            VerticalScript.collect(),
                            CoverageScript.collect(),
                            SeedAln.collect(),
-                           RefineScript.collect() )
+                           RefineScript.collect(),
+                           ReportScript.collect() )
 
     } else if ( params.workflow == "HEEA" ){
         HEEA( HMMSelection.out.splitText(by:1, file:true),
